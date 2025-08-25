@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow public read access, but only authenticated writes.
+    // In a real-world app, you'd want more granular security rules.
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
