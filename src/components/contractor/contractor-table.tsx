@@ -31,8 +31,8 @@ export function ContractorTable() {
 
     // In a real scenario, you would iterate over all users/recyclers
     // For mock, we'll just check the known ones
-    const recyclerIds = ['recycler-001', 'recycler-002'];
-    recyclerIds.forEach(id => {
+    const userIds = ['recycler-001', 'recycler-002', 'contractor-001'];
+    userIds.forEach(id => {
       const accepted = JSON.parse(localStorage.getItem(`pickups_accepted_${id}`) || '[]');
       allPickups.push(...accepted);
     });
@@ -42,13 +42,16 @@ export function ContractorTable() {
     citizenIds.forEach(id => {
         const citizenPickups: PickupRequest[] = JSON.parse(localStorage.getItem(`pickups_${id}`) || '[]');
         citizenPickups.forEach(p => {
+            // Avoid duplicates if already added from pending/accepted lists
             if (!allPickups.some(ap => ap.id === p.id)) {
                 allPickups.push(p);
             }
         });
     });
 
-    setPickups(allPickups);
+    // Remove duplicates just in case
+    const uniquePickups = allPickups.filter((v,i,a)=>a.findIndex(t=>(t.id === v.id))===i)
+    setPickups(uniquePickups);
   }
 
   useEffect(() => {
@@ -67,7 +70,7 @@ export function ContractorTable() {
         (filters.category === 'all' || pickup.category === filters.category) &&
         (filters.location === '' || pickup.location.displayAddress.toLowerCase().includes(filters.location.toLowerCase()))
       );
-    });
+    }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [pickups, filters]);
 
   const exportToCsv = () => {
@@ -94,8 +97,8 @@ export function ContractorTable() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>All Pickup Requests</CardTitle>
-        <CardDescription>A comprehensive, read-only list of all pickups.</CardDescription>
+        <CardTitle>Pickup Activity Monitor</CardTitle>
+        <CardDescription>A comprehensive, read-only list of all pickups on the platform.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex flex-col md:flex-row gap-4 mb-4">
