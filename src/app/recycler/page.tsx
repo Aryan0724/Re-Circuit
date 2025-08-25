@@ -7,7 +7,6 @@ import { useAuth } from '@/hooks/use-auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { motion } from 'framer-motion';
 import { updatePickupStatus } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import type { PickupRequest } from '@/types';
@@ -34,15 +33,10 @@ export default function RecyclerDashboardPage() {
 
   useEffect(() => {
     if (!userProfile) return;
-
     setLoading(true);
-    // Simulate fetching data
-    setTimeout(() => {
-        setPendingPickups(mockPendingPickupsData.map(p => ({ ...p, createdAt: new Date() as any })));
-        setAcceptedPickups(mockAcceptedPickupsData.map(p => ({ ...p, createdAt: new Date() as any })));
-        setLoading(false);
-    }, 500);
-
+    setPendingPickups(mockPendingPickupsData.map(p => ({ ...p, createdAt: new Date() as any })));
+    setAcceptedPickups(mockAcceptedPickupsData.map(p => ({ ...p, createdAt: new Date() as any })));
+    setLoading(false);
   }, [userProfile]);
   
   const handleUpdateStatus = async (pickupId: string, status: 'accepted' | 'rejected' | 'completed') => {
@@ -97,7 +91,7 @@ export default function RecyclerDashboardPage() {
           <CardContent className="space-y-4 max-h-[600px] overflow-y-auto">
             {loading ? <Skeleton className="h-32 w-full" /> : pendingPickups.length === 0 ? <p className="text-muted-foreground text-center py-8">No pending requests.</p> :
               pendingPickups.map(pickup => (
-                <motion.div key={pickup.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <div key={pickup.id}>
                     <div className="p-4 rounded-lg bg-muted/30">
                         <div className="flex gap-4">
                             <Image src={pickup.photoURL} alt={pickup.description} width={80} height={80} className="rounded-md object-cover h-20 w-20" />
@@ -112,7 +106,7 @@ export default function RecyclerDashboardPage() {
                             <Button size="sm" onClick={() => handleUpdateStatus(pickup.id, 'accepted')}><Check className="h-4 w-4 mr-1" />Accept</Button>
                         </div>
                     </div>
-                </motion.div>
+                </div>
             ))}
           </CardContent>
         </Card>
@@ -125,7 +119,7 @@ export default function RecyclerDashboardPage() {
           <CardContent className="space-y-4 max-h-[600px] overflow-y-auto">
              {loading ? <Skeleton className="h-32 w-full" /> : acceptedPickups.length === 0 ? <p className="text-muted-foreground text-center py-8">You have no accepted pickups.</p> :
               acceptedPickups.map(pickup => (
-                <motion.div key={pickup.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <div key={pickup.id}>
                     <div className="p-4 rounded-lg bg-muted/30">
                         <div className="flex gap-4 items-center">
                             <Image src={pickup.photoURL} alt={pickup.description} width={80} height={80} className="rounded-md object-cover h-20 w-20" />
@@ -136,7 +130,7 @@ export default function RecyclerDashboardPage() {
                             <Button size="sm" onClick={() => handleUpdateStatus(pickup.id, 'completed')}><Check className="h-4 w-4 mr-1" />Mark Complete</Button>
                         </div>
                     </div>
-                </motion.div>
+                </div>
             ))}
           </CardContent>
         </Card>

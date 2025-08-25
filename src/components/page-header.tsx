@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 
 interface PageHeaderProps {
   title: string;
@@ -9,10 +8,7 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: -20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
+    <div
       className="mb-8"
     >
       <div className="flex flex-col md:flex-row md:items-center md:justify-between">
@@ -22,6 +18,6 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
         </div>
         {children && <div className="mt-4 md:mt-0">{children}</div>}
       </div>
-    </motion.div>
+    </div>
   );
 }

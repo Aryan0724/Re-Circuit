@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { AnimatePresence, motion } from 'framer-motion';
 import type { PickupRequest, PickupStatus } from '@/types';
 import { Package, Hourglass, CheckCircle2, XCircle, Truck } from 'lucide-react';
 import Image from 'next/image';
@@ -58,11 +57,9 @@ export function UserPickupsList() {
   useEffect(() => {
     // Simulate fetching data
     setLoading(true);
-    setTimeout(() => {
-      const pickupsWithDate = mockPickups.map(p => ({ ...p, createdAt: new Date() as any }));
-      setPickups(pickupsWithDate);
-      setLoading(false);
-    }, 500);
+    const pickupsWithDate = mockPickups.map(p => ({ ...p, createdAt: new Date() as any }));
+    setPickups(pickupsWithDate);
+    setLoading(false);
   }, []);
 
   return (
@@ -81,17 +78,13 @@ export function UserPickupsList() {
                 <p className="mt-4">You haven't made any pickup requests yet.</p>
             </div>
           ) : (
-            <AnimatePresence>
+            <div>
               {pickups.map((pickup) => {
                 const config = statusConfig[pickup.status];
                 return (
-                  <motion.div
+                  <div
                     key={pickup.id}
-                    layout
-                    initial={{ opacity: 0, y: 20, scale: 0.98 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -20, scale: 0.98 }}
-                    transition={{ duration: 0.3 }}
+                    className="mb-2"
                   >
                     <div className="flex items-center gap-4 p-3 rounded-lg bg-muted/30 hover:bg-muted/60 transition-colors">
                       <Image
@@ -115,10 +108,10 @@ export function UserPickupsList() {
                           {config.label}
                       </Badge>
                     </div>
-                  </motion.div>
+                  </div>
                 );
               })}
-            </AnimatePresence>
+            </div>
           )}
         </div>
       </CardContent>

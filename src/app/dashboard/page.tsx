@@ -48,40 +48,19 @@ export default function CitizenDashboardPage() {
     <DashboardLayout>
       <PageHeader title={`Welcome, ${userProfile.name}!`} subtitle="Manage your e-waste pickups and track your contributions." />
       
-      <motion.div
-        className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ staggerChildren: 0.1 }}
-      >
-        <motion.div variants={{ initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 } }}>
-          <StatCard icon={<Star className="h-5 w-5" />} title="Your Credits" value={userProfile.credits ?? 0} color="yellow-500" />
-        </motion.div>
-        <motion.div variants={{ initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 } }}>
-          <StatCard icon={<Package className="h-5 w-5" />} title="Total Pickups" value={0} color="blue-500" />
-        </motion.div>
-         <motion.div variants={{ initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 } }}>
-          <StatCard icon={<Award className="h-5 w-5" />} title="Eco-Badge" value="Seedling" color="green-500" />
-        </motion.div>
-      </motion.div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
+        <StatCard icon={<Star className="h-5 w-5" />} title="Your Credits" value={userProfile.credits ?? 0} color="yellow-500" />
+        <StatCard icon={<Package className="h-5 w-5" />} title="Total Pickups" value={0} color="blue-500" />
+        <StatCard icon={<Award className="h-5 w-5" />} title="Eco-Badge" value="Seedling" color="green-500" />
+      </div>
 
       <div className="grid gap-8 lg:grid-cols-5">
-        <motion.div 
-          className="lg:col-span-2"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
+        <div className="lg:col-span-2">
           <PickupRequestForm />
-        </motion.div>
-        <motion.div 
-          className="lg:col-span-3"
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-        >
+        </div>
+        <div className="lg:col-span-3">
           <UserPickupsList />
-        </motion.div>
+        </div>
       </div>
 
     </DashboardLayout>

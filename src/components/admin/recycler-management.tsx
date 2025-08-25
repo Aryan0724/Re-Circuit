@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Switch } from '@/components/ui/switch';
-import { motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import type { UserProfile } from '@/types';
 
@@ -52,11 +51,8 @@ export function RecyclerManagement() {
           <p className="text-muted-foreground text-center py-8">No recyclers have registered yet.</p>
         ) : (
           recyclers.map((recycler) => (
-            <motion.div
+            <div
               key={recycler.uid}
-              layout
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
               className="flex items-center justify-between p-3 rounded-lg bg-muted/30"
             >
               <div className="flex items-center gap-4">
@@ -77,7 +73,7 @@ export function RecyclerManagement() {
                   aria-label={`Approve ${recycler.name}`}
                 />
               </div>
-            </motion.div>
+            </div>
           ))
         )}
       </CardContent>

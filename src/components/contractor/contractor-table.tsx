@@ -33,10 +33,8 @@ export function ContractorTable() {
 
   useEffect(() => {
     setLoading(true);
-    setTimeout(() => {
-        setPickups(mockAllPickups.map(p => ({ ...p, createdAt: new Date() as any })));
-        setLoading(false);
-    }, 300);
+    setPickups(mockAllPickups.map(p => ({ ...p, createdAt: new Date() as any })));
+    setLoading(false);
   }, []);
 
   const filteredPickups = useMemo(() => {
