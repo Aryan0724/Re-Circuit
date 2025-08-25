@@ -44,9 +44,9 @@ export default function SignUpScreen({ onSwitch }: SignUpScreenProps) {
       // The useAuth hook will handle redirection to the welcome screen
     } catch (error: any) {
         let errorMessage = 'An unknown error occurred. Please check the console for more details or contact support.';
-        // This will catch the custom error thrown from the useAuth hook for a duplicate username
-        if (error.message === 'Username is already taken.') {
-            errorMessage = error.message;
+        
+        if (error.message?.includes('Username is already taken')) {
+            errorMessage = 'This username is already taken. Please choose another one.';
         } else if (error.code) {
              switch(error.code) {
                 case 'auth/email-already-in-use':
@@ -59,13 +59,16 @@ export default function SignUpScreen({ onSwitch }: SignUpScreenProps) {
                     errorMessage = 'The email address is not valid.';
                     break;
                  case 'permission-denied': // Firestore permission error
-                    errorMessage = 'There was a problem setting up your profile. Please contact support.';
+                    errorMessage = 'There was a problem setting up your profile. Please check Firestore security rules and contact support.';
                     break;
                 default:
-                    errorMessage = `An unexpected error occurred: ${error.code}`;
+                    errorMessage = `An unexpected error occurred: ${error.code || error.message}`;
                     break;
             }
+        } else if (error.message) {
+            errorMessage = error.message;
         }
+
       toast({
         variant: 'destructive',
         title: 'Sign Up Failed',

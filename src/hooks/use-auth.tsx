@@ -72,7 +72,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (username: string, email: string, password: string) => {
     // 1. Check if username is unique
-    const usernameQuery = query(collection(db, 'users'), where('username', '==', username));
+    const usernameQuery = query(collection(db, 'users'), where('name', '==', username));
     const querySnapshot = await getDocs(usernameQuery);
     if (!querySnapshot.empty) {
         throw new Error('Username is already taken.');
@@ -84,11 +84,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // 3. Create user profile document in Firestore
     const userDocRef = doc(db, 'users', newUser.uid);
-    const newUserProfile: Partial<UserProfile> = {
+    const newUserProfile: UserProfile = {
         uid: newUser.uid,
-        username,
+        name: username, // Use username as the initial display name
         email: newUser.email,
-        name: username, // Default name to username
         photoURL: `https://placehold.co/100x100.png`,
         credits: 0,
         badges: [],
@@ -97,7 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // 4. Set the user and profile in the state without re-fetching
     setUser(newUser);
-    setUserProfile(newUserProfile as UserProfile); 
+    setUserProfile(newUserProfile); 
   };
 
   const login = async (email: string, password: string) => {
