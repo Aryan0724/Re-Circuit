@@ -3,8 +3,6 @@
 import React, { useState, useEffect, createContext, useContext, type ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import type { UserProfile, UserRole } from '@/types';
-import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 // Define mock users for fake authentication
 const mockUsers: Record<UserRole, UserProfile> = {

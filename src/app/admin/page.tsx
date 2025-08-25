@@ -2,11 +2,9 @@
 
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { PageHeader } from '@/components/page-header';
-import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Recycle, PackageCheck, Star, Activity } from 'lucide-react';
+import { Users, Recycle, Activity, PackageCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RecyclerManagement } from '@/components/admin/recycler-management';
@@ -28,27 +26,9 @@ function AdminStatCard({ icon, title, value, subtitle }: { icon: React.ReactNode
 }
 
 export default function AdminDashboardPage() {
-    const [stats, setStats] = useState({ users: 0, recyclers: 0, pickups: 0, completed: 0 });
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const usersQuery = collection(db, 'users');
-        const recyclersQuery = query(collection(db, 'users'), where('role', '==', 'Recycler'));
-        const pickupsQuery = collection(db, 'pickups');
-        const completedQuery = query(collection(db, 'pickups'), where('status', '==', 'completed'));
-        
-        const unsubs = [
-            onSnapshot(usersQuery, (snap) => setStats(s => ({ ...s, users: snap.size }))),
-            onSnapshot(recyclersQuery, (snap) => setStats(s => ({ ...s, recyclers: snap.size }))),
-            onSnapshot(pickupsQuery, (snap) => setStats(s => ({ ...s, pickups: snap.size }))),
-            onSnapshot(completedQuery, (snap) => {
-                setStats(s => ({ ...s, completed: snap.size }));
-                setLoading(false);
-            }),
-        ];
-
-        return () => unsubs.forEach(unsub => unsub());
-    }, []);
+    // Mock stats
+    const [stats, setStats] = useState({ users: 2350, recyclers: 2, pickups: 142, completed: 120 });
+    const [loading, setLoading] = useState(false);
 
     return (
         <DashboardLayout>

@@ -4,19 +4,26 @@ import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { PageHeader } from '@/components/page-header';
 import { useAuth } from '@/hooks/use-auth';
-import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
 import { updatePickupStatus } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import type { PickupRequest } from '@/types';
-import { Check, X, Map, Package, Loader2 } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import Image from 'next/image';
 import { RoutePlanner } from '@/components/recycler/route-planner';
+
+const mockPendingPickupsData: Omit<PickupRequest, 'createdAt'>[] = [
+  { id: 'p1', citizenId: 'c1', citizenName: 'Alice', category: 'Laptop', description: 'Broken Macbook Pro', location: { displayAddress: '1 Main St', lat: 0, lon: 0 }, photoURL: 'https://placehold.co/128x128.png', status: 'pending' },
+  { id: 'p2', citizenId: 'c2', citizenName: 'Bob', category: 'Appliance', description: 'Old microwave', location: { displayAddress: '2 Oak Ave', lat: 0, lon: 0 }, photoURL: 'https://placehold.co/128x128.png', status: 'pending' },
+];
+
+const mockAcceptedPickupsData: Omit<PickupRequest, 'createdAt'>[] = [
+  { id: 'p3', citizenId: 'c3', citizenName: 'Charlie', recyclerId: 'recycler-001', category: 'Battery', description: 'Used car battery', location: { displayAddress: '3 Pine Ln', lat: 0, lon: 0 }, photoURL: 'https://placehold.co/128x128.png', status: 'accepted' },
+];
+
 
 export default function RecyclerDashboardPage() {
   const { userProfile } = useAuth();
@@ -29,34 +36,29 @@ export default function RecyclerDashboardPage() {
     if (!userProfile) return;
 
     setLoading(true);
-    const qPending = query(
-      collection(db, 'pickups'),
-      where('status', '==', 'pending'),
-      orderBy('createdAt', 'desc')
-    );
-    const qAccepted = query(
-      collection(db, 'pickups'),
-      where('recyclerId', '==', userProfile.uid),
-      where('status', '==', 'accepted'),
-      orderBy('createdAt', 'desc')
-    );
-    
-    const unsubPending = onSnapshot(qPending, (snapshot) => {
-      setPendingPickups(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PickupRequest)));
-      setLoading(false);
-    });
+    // Simulate fetching data
+    setTimeout(() => {
+        setPendingPickups(mockPendingPickupsData.map(p => ({ ...p, createdAt: new Date() as any })));
+        setAcceptedPickups(mockAcceptedPickupsData.map(p => ({ ...p, createdAt: new Date() as any })));
+        setLoading(false);
+    }, 500);
 
-    const unsubAccepted = onSnapshot(qAccepted, (snapshot) => {
-      setAcceptedPickups(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PickupRequest)));
-    });
-
-    return () => {
-      unsubPending();
-      unsubAccepted();
-    };
   }, [userProfile]);
   
   const handleUpdateStatus = async (pickupId: string, status: 'accepted' | 'rejected' | 'completed') => {
+    // In-memory update for demonstration
+    if (status === 'accepted') {
+      const pickupToAccept = pendingPickups.find(p => p.id === pickupId);
+      if (pickupToAccept) {
+        setPendingPickups(current => current.filter(p => p.id !== pickupId));
+        setAcceptedPickups(current => [{ ...pickupToAccept, status: 'accepted' }, ...current]);
+      }
+    } else if (status === 'rejected') {
+        setPendingPickups(current => current.filter(p => p.id !== pickupId));
+    } else if (status === 'completed') {
+        setAcceptedPickups(current => current.filter(p => p.id !== pickupId));
+    }
+
     const result = await updatePickupStatus(pickupId, status, userProfile?.uid);
     if(result.success) {
       toast({ title: `Request ${status}` });
