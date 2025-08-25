@@ -12,9 +12,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { createPickupRequest } from '@/lib/actions';
 import { generatePickupDescription } from '@/ai/flows/generate-pickup-description';
-import { UploadCloud, Loader2, Wand2, MapPin } from 'lucide-react';
+import { UploadCloud, Loader2, MapPin } from 'lucide-react';
 import Image from 'next/image';
 import type { PickupRequest } from '@/types';
 
@@ -96,50 +95,41 @@ export function PickupRequestForm() {
   };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    if (!userProfile) return;
+    if (!userProfile || !preview) return;
     setIsSubmitting(true);
     
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     try {
-        const result = await createPickupRequest({
-          citizenId: userProfile.uid,
-          citizenName: userProfile.name,
-          ...values,
-          photoDataUrl: preview!,
-        });
+        const newPickup: PickupRequest = {
+            id: `pickup_${Date.now()}`,
+            citizenId: userProfile.uid,
+            citizenName: userProfile.name,
+            category: values.category,
+            description: values.description,
+            location: { displayAddress: values.address, lat: 0, lon: 0 },
+            photoURL: preview,
+            status: 'pending',
+            createdAt: new Date(),
+        };
 
-        if (result.success && result.photoURL) {
-            const newPickup: PickupRequest = {
-                id: `pickup_${Date.now()}`,
-                citizenId: userProfile.uid,
-                citizenName: userProfile.name,
-                category: values.category,
-                description: values.description,
-                location: { displayAddress: values.address, lat: 0, lon: 0 },
-                photoURL: result.photoURL,
-                status: 'pending',
-                createdAt: new Date(),
-            };
+        // Store in citizen's pickups
+        const citizenPickupsKey = `pickups_${userProfile.uid}`;
+        const existingCitizenPickups = JSON.parse(localStorage.getItem(citizenPickupsKey) || '[]');
+        localStorage.setItem(citizenPickupsKey, JSON.stringify([newPickup, ...existingCitizenPickups]));
+        
+        // Store in global pending pickups
+        const pendingPickupsKey = `pickups_pending`;
+        const existingPendingPickups = JSON.parse(localStorage.getItem(pendingPickupsKey) || '[]');
+        localStorage.setItem(pendingPickupsKey, JSON.stringify([newPickup, ...existingPendingPickups]));
+        
+        // Dispatch event to notify other components
+        window.dispatchEvent(new CustomEvent('pickups-updated'));
 
-            // Store in citizen's pickups
-            const citizenPickupsKey = `pickups_${userProfile.uid}`;
-            const existingCitizenPickups = JSON.parse(localStorage.getItem(citizenPickupsKey) || '[]');
-            localStorage.setItem(citizenPickupsKey, JSON.stringify([newPickup, ...existingCitizenPickups]));
-            
-            // Store in global pending pickups
-            const pendingPickupsKey = `pickups_pending`;
-            const existingPendingPickups = JSON.parse(localStorage.getItem(pendingPickupsKey) || '[]');
-            localStorage.setItem(pendingPickupsKey, JSON.stringify([newPickup, ...existingPendingPickups]));
-            
-            // Dispatch event to notify other components
-            window.dispatchEvent(new CustomEvent('pickups-updated'));
-
-            toast({ title: 'Success!', description: 'Your pickup request has been submitted.' });
-            form.reset();
-            setPreview(null);
-        } else {
-            throw new Error('Submission failed on the server.');
-        }
-
+        toast({ title: 'Success!', description: 'Your pickup request has been submitted.' });
+        form.reset();
+        setPreview(null);
     } catch (error) {
       console.error(error);
       toast({

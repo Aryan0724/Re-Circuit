@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, Moon, Sun, Recycle } from 'lucide-react';
 import type { UserRole } from '@/types';
 import { useEffect, useState } from 'react';
@@ -17,11 +17,18 @@ const roles: { role: UserRole; title: string }[] = [
 export default function Home() {
   const { loading, setUserRole } = useAuth();
   const [theme, setTheme] = useState('light');
+  const [showWelcome, setShowWelcome] = useState(true);
 
   useEffect(() => {
     const storedTheme = localStorage.getItem('theme') || 'light';
     setTheme(storedTheme);
     document.documentElement.classList.toggle('dark', storedTheme === 'dark');
+
+    const welcomeTimer = setTimeout(() => {
+        setShowWelcome(false);
+    }, 2000); // show welcome for 2 seconds
+
+    return () => clearTimeout(welcomeTimer);
   }, []);
 
   const toggleTheme = () => {
@@ -30,7 +37,6 @@ export default function Home() {
     localStorage.setItem('theme', newTheme);
     document.documentElement.classList.toggle('dark', newTheme === 'dark');
   };
-
 
   if (loading) {
     return (
@@ -49,36 +55,51 @@ export default function Home() {
           <span className="sr-only">Toggle theme</span>
         </Button>
       </div>
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="text-center flex flex-col items-center gap-2"
-      >
-        <Recycle className="h-16 w-16 text-primary" />
-        <h1 className="text-5xl font-bold text-primary">Re-Circuit</h1>
-        <p className="mt-2 text-muted-foreground">Welcome! Please select your role to begin.</p>
-      </motion.div>
+      
+      <AnimatePresence>
+        {showWelcome ? (
+            <motion.div
+                key="welcome"
+                initial={{ opacity: 0, y: 0 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20, transition: { duration: 0.5, ease: 'easeIn' } }}
+                transition={{ duration: 0.8 }}
+                className="text-center flex flex-col items-center gap-2"
+            >
+                <Recycle className="h-24 w-24 text-primary" />
+                <h1 className="text-6xl font-bold text-primary">Re-Circuit</h1>
+            </motion.div>
+        ) : (
+            <motion.div
+                key="role-selection"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="w-full max-w-sm text-center"
+            >
+                <div className="text-center flex flex-col items-center gap-2 mb-8">
+                    <Recycle className="h-16 w-16 text-primary" />
+                    <h1 className="text-5xl font-bold text-primary">Re-Circuit</h1>
+                    <p className="mt-2 text-muted-foreground">Welcome! Please select your role to begin.</p>
+                </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.2 }}
-        className="mt-8 w-full max-w-sm space-y-3"
-      >
-        {roles.map(({ role, title }) => (
-          <Button
-            key={role}
-            variant="outline"
-            size="lg"
-            className="w-full justify-between text-base py-6 bg-card hover:bg-accent/50"
-            onClick={() => setUserRole(role)}
-          >
-            {title}
-            <ChevronRight className="h-5 w-5" />
-          </Button>
-        ))}
-      </motion.div>
+                <div className="space-y-3">
+                    {roles.map(({ role, title }) => (
+                    <Button
+                        key={role}
+                        variant="outline"
+                        size="lg"
+                        className="w-full justify-between text-base py-6 bg-card hover:bg-accent/50"
+                        onClick={() => setUserRole(role)}
+                    >
+                        {title}
+                        <ChevronRight className="h-5 w-5" />
+                    </Button>
+                    ))}
+                </div>
+            </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

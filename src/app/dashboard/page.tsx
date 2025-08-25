@@ -15,7 +15,7 @@ function StatCard({ icon, title, value, color }: { icon: React.ReactNode; title:
     <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <div className={`text-${color}`}>{icon}</div>
+        <div className={color}>{icon}</div>
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold">{value}</div>
@@ -67,9 +67,9 @@ export default function CitizenDashboardPage() {
       <PageHeader title={`Welcome, ${userProfile.name}!`} subtitle="Manage your e-waste pickups and track your contributions." />
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
-        <StatCard icon={<Star className="h-5 w-5" />} title="Your Credits" value={userProfile.credits ?? 0} color="yellow-500" />
-        <StatCard icon={<Package className="h-5 w-5" />} title="Total Pickups" value={totalPickups} color="blue-500" />
-        <StatCard icon={<Award className="h-5 w-5" />} title="Eco-Badge" value="Seedling" color="green-500" />
+        <StatCard icon={<Star className="h-5 w-5" />} title="Your Credits" value={userProfile.credits ?? 0} color="text-yellow-500" />
+        <StatCard icon={<Package className="h-5 w-5" />} title="Total Pickups" value={totalPickups} color="text-blue-500" />
+        <StatCard icon={<Award className="h-5 w-5" />} title="Eco-Badge" value="Seedling" color="text-green-500" />
       </div>
 
       <div className="grid gap-8 lg:grid-cols-5">

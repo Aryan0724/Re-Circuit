@@ -7,7 +7,6 @@ import { useAuth } from '@/hooks/use-auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { updatePickupStatus } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import type { PickupRequest } from '@/types';
 import { Check, X } from 'lucide-react';
@@ -38,23 +37,21 @@ export default function RecyclerDashboardPage() {
     return () => window.removeEventListener('pickups-updated', refreshPickups);
   }, [userProfile?.uid]);
   
-  const handleUpdateStatus = async (pickup: PickupRequest, status: 'accepted' | 'rejected' | 'completed') => {
-    const result = await updatePickupStatus(pickup.id, status, userProfile?.uid);
-    if(result.success) {
+  const handleUpdateStatus = (pickup: PickupRequest, status: 'accepted' | 'rejected' | 'completed') => {
       // Remove from pending
       const currentPending = JSON.parse(localStorage.getItem('pickups_pending') || '[]');
       const newPending = currentPending.filter((p: PickupRequest) => p.id !== pickup.id);
       localStorage.setItem('pickups_pending', JSON.stringify(newPending));
 
-      if (status === 'accepted') {
-        const acceptedKey = `pickups_accepted_${userProfile!.uid}`;
+      if (status === 'accepted' && userProfile) {
+        const acceptedKey = `pickups_accepted_${userProfile.uid}`;
         const currentAccepted = JSON.parse(localStorage.getItem(acceptedKey) || '[]');
-        const updatedPickup = { ...pickup, status: 'accepted', recyclerId: userProfile!.uid };
+        const updatedPickup = { ...pickup, status: 'accepted' as const, recyclerId: userProfile.uid };
         localStorage.setItem(acceptedKey, JSON.stringify([updatedPickup, ...currentAccepted]));
       }
        
-      if (status === 'completed') {
-        const acceptedKey = `pickups_accepted_${userProfile!.uid}`;
+      if (status === 'completed' && userProfile) {
+        const acceptedKey = `pickups_accepted_${userProfile.uid}`;
         const currentAccepted = JSON.parse(localStorage.getItem(acceptedKey) || '[]');
         const newAccepted = currentAccepted.filter((p: PickupRequest) => p.id !== pickup.id);
         localStorage.setItem(acceptedKey, JSON.stringify(newAccepted));
@@ -70,12 +67,13 @@ export default function RecyclerDashboardPage() {
 
       window.dispatchEvent(new CustomEvent('pickups-updated'));
       toast({ title: `Request ${status}` });
-    } else {
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not update status.' });
-    }
   }
 
-  if (!userProfile?.approved) {
+  if (!userProfile) {
+    return <DashboardLayout><Skeleton className="h-screen w-full" /></DashboardLayout>
+  }
+  
+  if (!userProfile.approved) {
     return (
         <DashboardLayout>
             <div className="flex items-center justify-center h-full">

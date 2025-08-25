@@ -63,8 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (storedRole) {
       const uid = roleToUidMap[storedRole];
       const profile = { uid, ...mockUsers[storedRole] };
-      // In a real app, you might want to check if the recycler was approved.
-      // For this mock, we can check a separate localStorage item.
+      
       if (profile.role === 'Recycler') {
         const isApproved = localStorage.getItem(`recycler_${uid}_approved`) === 'true';
         profile.approved = isApproved;
@@ -87,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (userProfile) {
       const expectedPath = dashboardPaths[userProfile.role];
-      if (pathname !== expectedPath && !pathname.startsWith('/api')) { // Ignore api routes
+      if (pathname !== expectedPath) {
         router.push(expectedPath);
       }
     } else if (!isPublicPage) {
@@ -102,7 +101,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (baseProfile) {
         localStorage.setItem('userRole', role);
-        setUserProfile({ uid, ...baseProfile });
+        const fullProfile = { uid, ...baseProfile };
+
+        if(role === 'Recycler') {
+            const storedApproval = localStorage.getItem(`recycler_${uid}_approved`);
+            fullProfile.approved = storedApproval === 'true';
+        }
+
+        setUserProfile(fullProfile);
     } else {
         console.error("Invalid role selected");
     }
