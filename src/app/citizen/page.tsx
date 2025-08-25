@@ -11,7 +11,7 @@ import { useEffect, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ImpactDashboard } from '@/components/citizen/impact-dashboard';
 import { CitizenLeaderboard } from '@/components/citizen/citizen-leaderboard';
-import { useAuth } from '@/hooks/use-auth';
+import type { UserProfile } from '@/types';
 
 function StatCard({ icon, title, value, color }: { icon: React.ReactNode; title: string; value: string | number; color: string }) {
   return (
@@ -27,15 +27,24 @@ function StatCard({ icon, title, value, color }: { icon: React.ReactNode; title:
   );
 }
 
+// Mock user profile since auth is removed
+const mockUserProfile: UserProfile = {
+    uid: 'citizen-001',
+    name: 'Eco Citizen',
+    email: 'citizen@example.com',
+    role: 'Citizen',
+    photoURL: 'https://placehold.co/100x100.png',
+    credits: 420,
+    badges: ['first-contribution', 'laptop-recycler'],
+};
+
+
 export default function CitizenDashboardPage() {
-  const { userProfile } = useAuth();
   const [totalPickups, setTotalPickups] = useState(0);
 
   useEffect(() => {
-    if (!userProfile) return;
-
     const getPickups = () => {
-        const storedPickups = localStorage.getItem(`pickups_${userProfile.uid}`);
+        const storedPickups = localStorage.getItem(`pickups_${mockUserProfile.uid}`);
         if (storedPickups) {
             setTotalPickups(JSON.parse(storedPickups).length);
         } else {
@@ -48,18 +57,14 @@ export default function CitizenDashboardPage() {
     window.addEventListener('pickups-updated', getPickups);
     return () => window.removeEventListener('pickups-updated', getPickups);
 
-  }, [userProfile]);
-  
-  if (!userProfile) {
-      return <DashboardLayout><p>Loading profile...</p></DashboardLayout>
-  }
+  }, []);
 
   return (
     <DashboardLayout>
-      <PageHeader title={`Welcome, ${userProfile.name}!`} subtitle="Manage your e-waste pickups and track your contributions." />
+      <PageHeader title={`Welcome, ${mockUserProfile.name}!`} subtitle="Manage your e-waste pickups and track your contributions." />
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
-        <StatCard icon={<Star className="h-5 w-5" />} title="Your Credits" value={userProfile.credits ?? 0} color="text-yellow-500" />
+        <StatCard icon={<Star className="h-5 w-5" />} title="Your Credits" value={mockUserProfile.credits ?? 0} color="text-yellow-500" />
         <StatCard icon={<Package className="h-5 w-5" />} title="Total Pickups" value={totalPickups} color="text-blue-500" />
         <StatCard icon={<Award className="h-5 w-5" />} title="Eco-Badge" value="Seedling" color="text-green-500" />
       </div>

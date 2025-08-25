@@ -15,8 +15,19 @@ import { useToast } from '@/hooks/use-toast';
 import { generatePickupDescription } from '@/ai/flows/generate-pickup-description';
 import { UploadCloud, Loader2, MapPin } from 'lucide-react';
 import Image from 'next/image';
-import type { PickupRequest } from '@/types';
-import { useAuth } from '@/hooks/use-auth';
+import type { PickupRequest, UserProfile } from '@/types';
+
+// Mock user profile since auth is removed
+const mockUserProfile: UserProfile = {
+    uid: 'citizen-001',
+    name: 'Eco Citizen',
+    email: 'citizen@example.com',
+    role: 'Citizen',
+    photoURL: 'https://placehold.co/100x100.png',
+    credits: 420,
+    badges: ['first-contribution', 'laptop-recycler'],
+};
+
 
 const formSchema = z.object({
   category: z.string().min(1, 'Category is required'),
@@ -26,7 +37,6 @@ const formSchema = z.object({
 });
 
 export function PickupRequestForm() {
-  const { userProfile } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -96,7 +106,7 @@ export function PickupRequestForm() {
   };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    if (!preview || !userProfile) return;
+    if (!preview) return;
     setIsSubmitting(true);
     
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -104,8 +114,8 @@ export function PickupRequestForm() {
     try {
         const newPickup: PickupRequest = {
             id: `pickup_${Date.now()}`,
-            citizenId: userProfile.uid,
-            citizenName: userProfile.name,
+            citizenId: mockUserProfile.uid,
+            citizenName: mockUserProfile.name,
             category: values.category,
             description: values.description,
             location: { displayAddress: values.address, lat: 40.7128, lon: -74.0060 },
@@ -114,7 +124,7 @@ export function PickupRequestForm() {
             createdAt: new Date(),
         };
 
-        const citizenPickupsKey = `pickups_${userProfile.uid}`;
+        const citizenPickupsKey = `pickups_${mockUserProfile.uid}`;
         const existingCitizenPickups = JSON.parse(localStorage.getItem(citizenPickupsKey) || '[]');
         localStorage.setItem(citizenPickupsKey, JSON.stringify([newPickup, ...existingCitizenPickups]));
         

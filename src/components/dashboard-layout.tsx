@@ -12,21 +12,25 @@ import { Button } from "@/components/ui/button"
 import { Menu, LogOut, User } from "lucide-react"
 import Link from 'next/link';
 import { Separator } from '@/components/ui/separator';
-import { useAuth } from '@/hooks/use-auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ProfileEditor } from '@/components/profile/profile-editor';
+import type { UserProfile } from '@/types';
+
+
+// Mock user profile since auth is removed
+const mockUserProfile: UserProfile = {
+    uid: 'citizen-001',
+    name: 'Eco Citizen',
+    email: 'citizen@example.com',
+    role: 'Citizen',
+    photoURL: 'https://placehold.co/100x100.png',
+    credits: 420,
+    badges: ['first-contribution', 'laptop-recycler'],
+};
+
 
 function MobileSidebar() {
-    const { userProfile, loading, logout } = useAuth();
     const [isProfileEditorOpen, setIsProfileEditorOpen] = useState(false);
-
-    const handleLogout = async () => {
-        await logout();
-    };
-
-    if (loading || !userProfile) {
-        return null;
-    }
 
     return (
         <Sheet>
@@ -41,12 +45,12 @@ function MobileSidebar() {
                      <div className="p-4 border-b">
                          <div className="flex items-center gap-4">
                             <Avatar>
-                                <AvatarImage src={userProfile?.photoURL} alt={userProfile?.name} />
-                                <AvatarFallback>{userProfile?.name?.charAt(0) || userProfile?.email?.charAt(0)}</AvatarFallback>
+                                <AvatarImage src={mockUserProfile?.photoURL} alt={mockUserProfile?.name} />
+                                <AvatarFallback>{mockUserProfile?.name?.charAt(0) || mockUserProfile?.email?.charAt(0)}</AvatarFallback>
                             </Avatar>
                             <div>
-                                <p className="font-semibold">{userProfile?.name}</p>
-                                <p className="text-sm text-muted-foreground">{userProfile?.email}</p>
+                                <p className="font-semibold">{mockUserProfile?.name}</p>
+                                <p className="text-sm text-muted-foreground">{mockUserProfile?.email}</p>
                             </div>
                         </div>
                     </div>
@@ -63,7 +67,7 @@ function MobileSidebar() {
                     <Separator />
                     <div className="p-2">
                         <SheetClose asChild>
-                            <Button variant="ghost" className="w-full justify-start gap-2" onClick={handleLogout}>
+                            <Button variant="ghost" className="w-full justify-start gap-2" onClick={() => alert("Logout functionality removed.")}>
                                 <LogOut className="h-4 w-4" />
                                 Sign Out
                             </Button>
@@ -77,25 +81,6 @@ function MobileSidebar() {
 
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { userProfile, loading } = useAuth();
-  
-  if (loading) {
-    return (
-       <div className="flex items-center justify-center min-h-screen">
-          <p>Loading session...</p>
-       </div>
-    );
-  }
-  
-  if (!userProfile) {
-      // This state can be hit briefly between auth state change and profile load
-      // Or if there's no user session at all
-       return (
-       <div className="flex items-center justify-center min-h-screen">
-          <p>Loading...</p>
-       </div>
-    );
-  }
 
   return (
     <div className="flex min-h-screen">

@@ -12,7 +12,18 @@ import { generateImpactReport } from '@/ai/flows/generate-impact-report';
 import { Share } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { Badges } from './impact-badges';
-import { useAuth } from '@/hooks/use-auth';
+
+// Mock user profile since auth is removed
+const mockUserProfile: UserProfile = {
+    uid: 'citizen-001',
+    name: 'Eco Citizen',
+    email: 'citizen@example.com',
+    role: 'Citizen',
+    photoURL: 'https://placehold.co/100x100.png',
+    credits: 420,
+    badges: ['first-contribution', 'laptop-recycler'],
+};
+
 
 const IMPACT_VALUES = {
   Laptop: { co2: 22, materials: 1.5, landfill: 2.5 },
@@ -51,7 +62,6 @@ function ImpactCard({ icon, title, value, unit }: { icon: React.ReactNode; title
 }
 
 export function ImpactDashboard() {
-  const { userProfile } = useAuth();
   const { toast } = useToast();
   const [metrics, setMetrics] = useState<ImpactMetrics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -60,10 +70,8 @@ export function ImpactDashboard() {
   const [communityMetrics, setCommunityMetrics] = useState<CommunityMetrics | null>(null);
 
   useEffect(() => {
-    if (!userProfile) return;
-    
     setLoading(true);
-    const storedPickups = localStorage.getItem(`pickups_${userProfile.uid}`);
+    const storedPickups = localStorage.getItem(`pickups_${mockUserProfile.uid}`);
     if (storedPickups) {
       const allPickups: PickupRequest[] = JSON.parse(storedPickups);
       const completedPickups = allPickups.filter(p => p.status === 'completed');
@@ -91,7 +99,7 @@ export function ImpactDashboard() {
     fetchCommunityImpact();
 
     setLoading(false);
-  }, [userProfile]);
+  }, []);
 
   const handleGenerateReport = async () => {
     if (!metrics) return;
@@ -110,8 +118,8 @@ export function ImpactDashboard() {
             return;
         }
 
-        const latestBadge = userProfile?.badges && userProfile.badges.length > 0
-            ? userProfile.badges[userProfile.badges.length - 1]
+        const latestBadge = mockUserProfile?.badges && mockUserProfile.badges.length > 0
+            ? mockUserProfile.badges[mockUserProfile.badges.length - 1]
             : 'Eco-Explorer';
         
         const communityCo2 = communityMetrics?.totalCo2Reduced || 0;
@@ -163,7 +171,7 @@ export function ImpactDashboard() {
     }
   };
 
-  if (loading || !userProfile) {
+  if (loading) {
     return <p>Loading impact data...</p>;
   }
 
@@ -171,13 +179,13 @@ export function ImpactDashboard() {
     return <p>No impact data available.</p>;
   }
   
-  const latestBadgeName = userProfile?.badges && userProfile.badges.length > 0 ? userProfile.badges[userProfile.badges.length - 1] : "Eco-Explorer";
+  const latestBadgeName = mockUserProfile?.badges && mockUserProfile.badges.length > 0 ? mockUserProfile.badges[mockUserProfile.badges.length - 1] : "Eco-Explorer";
 
   return (
     <div className="space-y-8">
        {/* Shareable Card - rendered but hidden */}
         <div id="impact-share-card" className="p-8 bg-gradient-to-br from-green-100 via-blue-100 to-primary/20 rounded-lg shadow-lg text-center space-y-4 fixed -left-[9999px] top-0 w-[400px]">
-            <h3 className="text-2xl font-bold text-primary">{userProfile?.name || 'Re-Circuit User'}</h3>
+            <h3 className="text-2xl font-bold text-primary">{mockUserProfile?.name || 'Re-Circuit User'}</h3>
             <p className="text-lg text-foreground/80">My Impact Highlights:</p>
             <div className="flex justify-around text-base font-semibold text-foreground/90">
                 <span>🍃 {metrics.co2.toFixed(1)} kg CO₂</span>
@@ -270,7 +278,7 @@ export function ImpactDashboard() {
        </div>
 
 
-      <Badges earnedBadges={userProfile?.badges || []} />
+      <Badges earnedBadges={mockUserProfile?.badges || []} />
 
     </div>
   );

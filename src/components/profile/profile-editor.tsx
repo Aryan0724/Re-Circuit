@@ -13,9 +13,19 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import type { UserProfile } from '@/types';
-import { useAuth } from '@/hooks/use-auth';
-import { storage } from '@/lib/firebase';
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+
+
+// Mock user profile since auth is removed
+const mockUserProfile: UserProfile = {
+    uid: 'citizen-001',
+    name: 'Eco Citizen',
+    email: 'citizen@example.com',
+    role: 'Citizen',
+    photoURL: 'https://placehold.co/100x100.png',
+    credits: 420,
+    badges: ['first-contribution', 'laptop-recycler'],
+};
+
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.'),
@@ -29,7 +39,6 @@ interface ProfileEditorProps {
 }
 
 export function ProfileEditor({ children, open, onOpenChange }: ProfileEditorProps) {
-  const { user, userProfile, updateProfile } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
@@ -43,11 +52,11 @@ export function ProfileEditor({ children, open, onOpenChange }: ProfileEditorPro
   });
 
   useEffect(() => {
-    if (userProfile && open) {
-      form.reset({ name: userProfile.name });
-      setPreview(userProfile.photoURL);
+    if (open) {
+      form.reset({ name: mockUserProfile.name });
+      setPreview(mockUserProfile.photoURL);
     }
-  }, [userProfile, open, form]);
+  }, [open, form]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -62,24 +71,14 @@ export function ProfileEditor({ children, open, onOpenChange }: ProfileEditorPro
   };
   
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    if (!user || !userProfile) return;
     setIsSubmitting(true);
     
     try {
-        const profileUpdates: Partial<Pick<UserProfile, 'name' | 'photoURL'>> = {
-            name: values.name,
-        };
-
-        if (photoFile) {
-            const storageRef = ref(storage, `profile_pictures/${user.uid}`);
-            await uploadBytes(storageRef, photoFile);
-            const photoURL = await getDownloadURL(storageRef);
-            profileUpdates.photoURL = photoURL;
-        }
+        // In a real app, this would update the user profile in the database.
+        // For now, we'll just show a success message.
+        await new Promise(resolve => setTimeout(resolve, 500)); 
         
-        await updateProfile(profileUpdates);
-        
-        toast({ title: 'Success!', description: 'Your profile has been updated.' });
+        toast({ title: 'Success!', description: 'Your profile has been updated (mock).' });
         onOpenChange(false);
     } catch (error) {
       console.error(error);
@@ -114,8 +113,8 @@ export function ProfileEditor({ children, open, onOpenChange }: ProfileEditorPro
                              <FormControl>
                                 <label htmlFor="profile-pic-upload" className="cursor-pointer">
                                     <Avatar className="h-24 w-24 ring-2 ring-primary ring-offset-2 ring-offset-background">
-                                        <AvatarImage src={preview || ''} alt={userProfile?.name} />
-                                        <AvatarFallback>{userProfile?.name ? userProfile.name.charAt(0) : 'U'}</AvatarFallback>
+                                        <AvatarImage src={preview || ''} alt={mockUserProfile?.name} />
+                                        <AvatarFallback>{mockUserProfile?.name ? mockUserProfile.name.charAt(0) : 'U'}</AvatarFallback>
                                     </Avatar>
                                     <Input id="profile-pic-upload" type="file" className="hidden" accept="image/*" onChange={e => { field.onChange(e.target.files); handleFileChange(e); }} />
                                 </label>

@@ -6,17 +6,26 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import type { PickupRequest, PickupLocation } from '@/types';
+import type { PickupRequest, PickupLocation, UserProfile } from '@/types';
 import { Check, X, Route } from 'lucide-react';
 import Image from 'next/image';
-import { useAuth } from '@/hooks/use-auth';
+
+
+// Mock user profile since auth is removed
+const mockUserProfile: UserProfile = {
+    uid: 'recycler-001',
+    name: 'Recycle Corp',
+    email: 'recycler@example.com',
+    role: 'Recycler',
+    approved: true,
+    photoURL: 'https://placehold.co/100x100.png',
+};
 
 interface RecyclerDashboardClientProps {
     setAcceptedPickups: (pickups: PickupRequest[]) => void;
 }
 
 export function RecyclerDashboardClient({ setAcceptedPickups }: RecyclerDashboardClientProps) {
-  const { userProfile } = useAuth();
   const [pendingPickups, setPendingPickups] = useState<PickupRequest[]>([]);
   const [acceptedForUser, setAcceptedForUser] = useState<PickupRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,13 +41,12 @@ export function RecyclerDashboardClient({ setAcceptedPickups }: RecyclerDashboar
   };
 
   const refreshPickups = useCallback(() => {
-    if (!userProfile) return;
     const pending = JSON.parse(localStorage.getItem('pickups_pending') || '[]');
-    const accepted = JSON.parse(localStorage.getItem(`pickups_accepted_${userProfile.uid}`) || '[]');
+    const accepted = JSON.parse(localStorage.getItem(`pickups_accepted_${mockUserProfile.uid}`) || '[]');
     setPendingPickups(pending);
     setAcceptedForUser(accepted);
     setAcceptedPickups(accepted); // Lift state up
-  }, [userProfile, setAcceptedPickups]);
+  }, [setAcceptedPickups]);
 
   useEffect(() => {
     setLoading(true);
@@ -50,19 +58,17 @@ export function RecyclerDashboardClient({ setAcceptedPickups }: RecyclerDashboar
   }, [refreshPickups]);
   
   const handleUpdateStatus = (pickup: PickupRequest, status: 'accepted' | 'rejected' | 'completed') => {
-      if (!userProfile) return;
-
       // Update pending list
       const currentPending = JSON.parse(localStorage.getItem('pickups_pending') || '[]');
       const newPending = currentPending.filter((p: PickupRequest) => p.id !== pickup.id);
       localStorage.setItem('pickups_pending', JSON.stringify(newPending));
 
       // Update accepted list
-      const acceptedKey = `pickups_accepted_${userProfile.uid}`;
+      const acceptedKey = `pickups_accepted_${mockUserProfile.uid}`;
       let currentAccepted = JSON.parse(localStorage.getItem(acceptedKey) || '[]');
       
       if (status === 'accepted') {
-        const updatedPickup = { ...pickup, status: 'accepted' as const, recyclerId: userProfile.uid };
+        const updatedPickup = { ...pickup, status: 'accepted' as const, recyclerId: mockUserProfile.uid };
         currentAccepted = [updatedPickup, ...currentAccepted];
       } else if (status === 'completed') {
         currentAccepted = currentAccepted.filter((p: PickupRequest) => p.id !== pickup.id);

@@ -10,8 +10,18 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Globe, Leaf, BarChart2, Package } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RecyclerDashboardClient } from '@/components/recycler/recycler-dashboard-client';
-import type { PickupRequest } from '@/types';
-import { useAuth } from '@/hooks/use-auth';
+import type { PickupRequest, UserProfile } from '@/types';
+
+
+// Mock user profile since auth is removed
+const mockUserProfile: UserProfile = {
+    uid: 'recycler-001',
+    name: 'Recycle Corp',
+    email: 'recycler@example.com',
+    role: 'Recycler',
+    approved: true,
+    photoURL: 'https://placehold.co/100x100.png',
+};
 
 interface RecyclerStats {
     totalEWasteKg: number;
@@ -45,16 +55,9 @@ function ImpactStatCard({ icon, title, value, unit, description }: { icon: React
 
 
 export default function RecyclerDashboardPage() {
-  const { userProfile } = useAuth();
-
-  // Accepted pickups are now managed within the client component
   const [acceptedPickups, setAcceptedPickups] = useState<PickupRequest[]>([]);
 
-  if (!userProfile) {
-      return <DashboardLayout><p>Loading...</p></DashboardLayout>
-  }
-  
-  if (!userProfile.approved) {
+  if (!mockUserProfile.approved) {
     return (
         <DashboardLayout>
             <div className="flex items-center justify-center h-full">
@@ -89,7 +92,7 @@ export default function RecyclerDashboardPage() {
 
         <TabsContent value="impact" className="mt-6">
             <Suspense fallback={<ImpactLoadingSkeleton />}>
-               <ImpactSection userId={userProfile.uid} />
+               <ImpactSection userId={mockUserProfile.uid} />
             </Suspense>
         </TabsContent>
       </Tabs>

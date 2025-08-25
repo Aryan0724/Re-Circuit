@@ -3,7 +3,6 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { AnimatedGradient } from '@/components/animated-gradient';
-import { AuthProvider } from '@/hooks/use-auth';
 
 export const metadata: Metadata = {
   title: 'Re-Circuit',
@@ -23,13 +22,11 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased h-full">
-          <AuthProvider>
             <div className="main-background">
                 <AnimatedGradient />
             </div>
             {children}
             <Toaster />
-          </AuthProvider>
       </body>
     </html>
   );
