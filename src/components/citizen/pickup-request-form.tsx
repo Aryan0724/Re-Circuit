@@ -15,16 +15,8 @@ import { useToast } from '@/hooks/use-toast';
 import { generatePickupDescription } from '@/ai/flows/generate-pickup-description';
 import { UploadCloud, Loader2, MapPin } from 'lucide-react';
 import Image from 'next/image';
-import type { PickupRequest, UserProfile } from '@/types';
-
-// Mock user since auth is removed
-const mockUser: UserProfile = {
-    uid: 'citizen-001',
-    role: 'Citizen',
-    name: 'Eco Citizen',
-    email: 'citizen@example.com',
-    photoURL: 'https://placehold.co/100x100.png',
-};
+import type { PickupRequest } from '@/types';
+import { useAuth } from '@/hooks/use-auth';
 
 const formSchema = z.object({
   category: z.string().min(1, 'Category is required'),
@@ -34,6 +26,7 @@ const formSchema = z.object({
 });
 
 export function PickupRequestForm() {
+  const { userProfile } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -103,36 +96,32 @@ export function PickupRequestForm() {
   };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    if (!preview) return;
+    if (!preview || !userProfile) return;
     setIsSubmitting(true);
     
-    // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, 500));
 
     try {
         const newPickup: PickupRequest = {
             id: `pickup_${Date.now()}`,
-            citizenId: mockUser.uid,
-            citizenName: mockUser.name,
+            citizenId: userProfile.uid,
+            citizenName: userProfile.name,
             category: values.category,
             description: values.description,
-            location: { displayAddress: values.address, lat: 40.7128, lon: -74.0060 }, // Valid coordinates
+            location: { displayAddress: values.address, lat: 40.7128, lon: -74.0060 },
             photoURL: preview,
             status: 'pending',
             createdAt: new Date(),
         };
 
-        // Store in citizen's pickups
-        const citizenPickupsKey = `pickups_${mockUser.uid}`;
+        const citizenPickupsKey = `pickups_${userProfile.uid}`;
         const existingCitizenPickups = JSON.parse(localStorage.getItem(citizenPickupsKey) || '[]');
         localStorage.setItem(citizenPickupsKey, JSON.stringify([newPickup, ...existingCitizenPickups]));
         
-        // Store in global pending pickups
         const pendingPickupsKey = `pickups_pending`;
         const existingPendingPickups = JSON.parse(localStorage.getItem(pendingPickupsKey) || '[]');
         localStorage.setItem(pendingPickupsKey, JSON.stringify([newPickup, ...existingPendingPickups]));
         
-        // Dispatch event to notify other components
         window.dispatchEvent(new CustomEvent('pickups-updated'));
 
         toast({ title: 'Success!', description: 'Your pickup request has been submitted.' });

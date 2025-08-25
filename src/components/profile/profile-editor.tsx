@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -14,6 +14,8 @@ import { Loader2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import type { UserProfile } from '@/types';
 import { useAuth } from '@/hooks/use-auth';
+import { storage } from '@/lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.'),
@@ -27,10 +29,11 @@ interface ProfileEditorProps {
 }
 
 export function ProfileEditor({ children, open, onOpenChange }: ProfileEditorProps) {
-  const { userProfile, updateProfile } = useAuth();
+  const { user, userProfile, updateProfile } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -49,6 +52,7 @@ export function ProfileEditor({ children, open, onOpenChange }: ProfileEditorPro
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      setPhotoFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreview(reader.result as string);
@@ -58,7 +62,7 @@ export function ProfileEditor({ children, open, onOpenChange }: ProfileEditorPro
   };
   
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    if (!userProfile) return;
+    if (!user || !userProfile) return;
     setIsSubmitting(true);
     
     try {
@@ -66,14 +70,17 @@ export function ProfileEditor({ children, open, onOpenChange }: ProfileEditorPro
             name: values.name,
         };
 
-        if (preview && preview !== userProfile.photoURL) {
-            profileUpdates.photoURL = preview;
+        if (photoFile) {
+            const storageRef = ref(storage, `profile_pictures/${user.uid}`);
+            await uploadBytes(storageRef, photoFile);
+            const photoURL = await getDownloadURL(storageRef);
+            profileUpdates.photoURL = photoURL;
         }
         
-        updateProfile(profileUpdates);
+        await updateProfile(profileUpdates);
         
         toast({ title: 'Success!', description: 'Your profile has been updated.' });
-        onOpenChange(false); // Close the dialog on success
+        onOpenChange(false);
     } catch (error) {
       console.error(error);
       toast({

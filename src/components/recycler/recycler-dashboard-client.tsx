@@ -9,22 +9,15 @@ import { useToast } from '@/hooks/use-toast';
 import type { PickupRequest, UserProfile, PickupLocation } from '@/types';
 import { Check, X, Route } from 'lucide-react';
 import Image from 'next/image';
+import { useAuth } from '@/hooks/use-auth';
 
 interface RecyclerDashboardClientProps {
     initialPendingPickups: PickupRequest[];
     initialAcceptedPickups: PickupRequest[];
 }
 
-const mockRecyclerUser: UserProfile = {
-  uid: 'recycler-001',
-  role: 'Recycler',
-  name: 'Green Recyclers',
-  email: 'recycler@example.com',
-  photoURL: '',
-  approved: true
-}
-
 export function RecyclerDashboardClient({ initialPendingPickups, initialAcceptedPickups }: RecyclerDashboardClientProps) {
+  const { userProfile } = useAuth();
   const [pendingPickups, setPendingPickups] = useState<PickupRequest[]>(initialPendingPickups);
   const [acceptedPickups, setAcceptedPickups] = useState<PickupRequest[]>(initialAcceptedPickups);
   const [loading, setLoading] = useState(true);
@@ -39,45 +32,44 @@ export function RecyclerDashboardClient({ initialPendingPickups, initialAccepted
     window.open(url, '_blank');
   };
 
-  const refreshPickups = () => {
+  const refreshPickups = useCallback(() => {
+    if (!userProfile) return;
     const pending = JSON.parse(localStorage.getItem('pickups_pending') || '[]');
-    const accepted = JSON.parse(localStorage.getItem(`pickups_accepted_${mockRecyclerUser.uid}`) || '[]');
+    const accepted = JSON.parse(localStorage.getItem(`pickups_accepted_${userProfile.uid}`) || '[]');
     setPendingPickups(pending);
     setAcceptedPickups(accepted);
-  }
+  }, [userProfile]);
 
   useEffect(() => {
-    // Data is passed from server, but we re-sync with localStorage on client
-    // to get the most up-to-date state.
     setLoading(true);
     refreshPickups();
     setLoading(false);
 
     window.addEventListener('pickups-updated', refreshPickups);
     return () => window.removeEventListener('pickups-updated', refreshPickups);
-  }, []);
+  }, [refreshPickups]);
   
   const handleUpdateStatus = (pickup: PickupRequest, status: 'accepted' | 'rejected' | 'completed') => {
-      // Remove from pending
+      if (!userProfile) return;
+
       const currentPending = JSON.parse(localStorage.getItem('pickups_pending') || '[]');
       const newPending = currentPending.filter((p: PickupRequest) => p.id !== pickup.id);
       localStorage.setItem('pickups_pending', JSON.stringify(newPending));
 
       if (status === 'accepted') {
-        const acceptedKey = `pickups_accepted_${mockRecyclerUser.uid}`;
+        const acceptedKey = `pickups_accepted_${userProfile.uid}`;
         const currentAccepted = JSON.parse(localStorage.getItem(acceptedKey) || '[]');
-        const updatedPickup = { ...pickup, status: 'accepted' as const, recyclerId: mockRecyclerUser.uid };
+        const updatedPickup = { ...pickup, status: 'accepted' as const, recyclerId: userProfile.uid };
         localStorage.setItem(acceptedKey, JSON.stringify([updatedPickup, ...currentAccepted]));
       }
        
       if (status === 'completed') {
-        const acceptedKey = `pickups_accepted_${mockRecyclerUser.uid}`;
+        const acceptedKey = `pickups_accepted_${userProfile.uid}`;
         const currentAccepted = JSON.parse(localStorage.getItem(acceptedKey) || '[]');
         const newAccepted = currentAccepted.filter((p: PickupRequest) => p.id !== pickup.id);
         localStorage.setItem(acceptedKey, JSON.stringify(newAccepted));
       }
 
-      // Update the original citizen's record
       const citizenKey = `pickups_${pickup.citizenId}`;
       const citizenPickups = JSON.parse(localStorage.getItem(citizenKey) || '[]');
       const updatedCitizenPickups = citizenPickups.map((p: PickupRequest) => 
@@ -87,6 +79,19 @@ export function RecyclerDashboardClient({ initialPendingPickups, initialAccepted
 
       window.dispatchEvent(new CustomEvent('pickups-updated'));
       toast({ title: `Request ${status}` });
+  }
+
+  if (!userProfile?.approved) {
+    return (
+        <div className="flex items-center justify-center h-full">
+            <Card className="max-w-lg text-center p-8">
+                <CardHeader>
+                    <CardTitle>Approval Pending</CardTitle>
+                    <CardDescription>Your account is awaiting approval from an administrator. You will be able to see pickup requests once approved.</CardDescription>
+                </CardHeader>
+            </Card>
+        </div>
+    )
   }
   
   return (

@@ -4,19 +4,11 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import type { PickupRequest, PickupStatus, UserProfile } from '@/types';
+import type { PickupRequest, PickupStatus } from '@/types';
 import { Package, Hourglass, CheckCircle2, XCircle, Truck } from 'lucide-react';
 import Image from 'next/image';
 import { formatDistanceToNow } from 'date-fns';
-
-// Mock user since auth is removed
-const mockUser: UserProfile = {
-    uid: 'citizen-001',
-    role: 'Citizen',
-    name: 'Eco Citizen',
-    email: 'citizen@example.com',
-    photoURL: 'https://placehold.co/100x100.png',
-};
+import { useAuth } from '@/hooks/use-auth';
 
 const statusConfig: Record<PickupStatus, { label: string; icon: React.ReactNode; color: string }> = {
   pending: { label: 'Pending', icon: <Hourglass className="h-3 w-3" />, color: 'bg-yellow-500' },
@@ -27,20 +19,22 @@ const statusConfig: Record<PickupStatus, { label: string; icon: React.ReactNode;
 
 
 export function UserPickupsList() {
+  const { userProfile } = useAuth();
   const [pickups, setPickups] = useState<PickupRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!userProfile) return;
+
     setLoading(true);
-    const storedPickups = localStorage.getItem(`pickups_${mockUser.uid}`);
+    const storedPickups = localStorage.getItem(`pickups_${userProfile.uid}`);
     if (storedPickups) {
         setPickups(JSON.parse(storedPickups));
     }
     setLoading(false);
 
-    // Listen for custom event to update pickups
     const handlePickupsUpdate = () => {
-        const updatedPickups = localStorage.getItem(`pickups_${mockUser.uid}`);
+        const updatedPickups = localStorage.getItem(`pickups_${userProfile.uid}`);
         if (updatedPickups) {
             setPickups(JSON.parse(updatedPickups));
         }
@@ -49,7 +43,7 @@ export function UserPickupsList() {
 
     return () => window.removeEventListener('pickups-updated', handlePickupsUpdate);
 
-  }, []);
+  }, [userProfile]);
 
   return (
     <Card className="shadow-lg h-full">

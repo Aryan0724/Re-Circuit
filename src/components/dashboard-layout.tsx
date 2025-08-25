@@ -20,13 +20,12 @@ function MobileSidebar() {
     const { userProfile, loading, logout } = useAuth();
     const [isProfileEditorOpen, setIsProfileEditorOpen] = useState(false);
 
-    const handleLogout = () => {
-        logout();
-        // The redirect is handled by the useAuth hook
+    const handleLogout = async () => {
+        await logout();
     };
 
-    if (loading) {
-        return null; // Or a loading spinner
+    if (loading || !userProfile) {
+        return null;
     }
 
     return (
@@ -37,13 +36,13 @@ function MobileSidebar() {
                     <span className="sr-only">Open sidebar</span>
                 </Button>
             </SheetTrigger>
-            <SheetContent side="left">
+            <SheetContent side="left" className="p-0">
                  <div className="flex flex-col h-full">
                      <div className="p-4 border-b">
                          <div className="flex items-center gap-4">
                             <Avatar>
                                 <AvatarImage src={userProfile?.photoURL} alt={userProfile?.name} />
-                                <AvatarFallback>{userProfile?.name.charAt(0)}</AvatarFallback>
+                                <AvatarFallback>{userProfile?.name?.charAt(0) || userProfile?.email?.charAt(0)}</AvatarFallback>
                             </Avatar>
                             <div>
                                 <p className="font-semibold">{userProfile?.name}</p>
@@ -51,7 +50,7 @@ function MobileSidebar() {
                             </div>
                         </div>
                     </div>
-                    <div className="flex-1 py-4">
+                    <div className="flex-1 py-4 px-2">
                          <ProfileEditor open={isProfileEditorOpen} onOpenChange={setIsProfileEditorOpen}>
                             <SheetClose asChild>
                                <Button variant="ghost" className="w-full justify-start gap-2" onClick={() => setIsProfileEditorOpen(true)}>
@@ -62,7 +61,7 @@ function MobileSidebar() {
                          </ProfileEditor>
                     </div>
                     <Separator />
-                    <div className="p-4">
+                    <div className="p-2">
                         <SheetClose asChild>
                             <Button variant="ghost" className="w-full justify-start gap-2" onClick={handleLogout}>
                                 <LogOut className="h-4 w-4" />
@@ -83,7 +82,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (loading) {
     return (
        <div className="flex items-center justify-center min-h-screen">
-          <p>Loading user profile...</p>
+          <p>Loading session...</p>
+       </div>
+    );
+  }
+  
+  if (!userProfile) {
+      // This state can be hit briefly between auth state change and profile load
+      // Or if there's no user session at all
+       return (
+       <div className="flex items-center justify-center min-h-screen">
+          <p>Loading...</p>
        </div>
     );
   }

@@ -15,19 +15,19 @@ const selectableRoles: { name: string, role: UserRole }[] = [
 ];
 
 const WelcomeScreen: React.FC = () => {
-  const { userProfile, setUserRole } = useAuth();
+  const { user, setUserRole } = useAuth();
   const [loadingRole, setLoadingRole] = useState<UserRole | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  if (!userProfile) {
-    return null; // Or a loading indicator
+  if (!user) {
+    return null; // Should be handled by router
   }
 
   const handleRoleSelection = async (role: UserRole) => {
     setLoadingRole(role);
     setError(null);
     try {
-      setUserRole(role);
+      await setUserRole(role);
     } catch (err) {
       console.error("Error setting user role: ", err);
       setError('Failed to set your role. Please try again.');
@@ -39,8 +39,8 @@ const WelcomeScreen: React.FC = () => {
     <div className="flex flex-col items-center justify-center min-h-screen bg-[#F0FFF4] py-12 text-green-800">
         <div className="text-center">
             <Recycle className="h-16 w-16 mx-auto mb-4"/>
-            <h1 className="text-5xl font-bold mb-4">Re-Circuit</h1>
-            <p className="text-lg mb-8">Welcome! Please select your role to begin.</p>
+            <h1 className="text-5xl font-bold mb-4">Welcome to Re-Circuit!</h1>
+            <p className="text-lg mb-8">Please select your role to complete registration.</p>
         </div>
 
         <div className="flex flex-col space-y-4 w-full max-w-sm">

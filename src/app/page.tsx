@@ -3,22 +3,25 @@
 
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import WelcomeScreen from '@/components/welcome-screen';
 import { Skeleton } from '@/components/ui/skeleton';
 import DashboardLayout from '@/components/dashboard-layout';
+import LoginScreen from '@/components/auth/login-screen';
+import SignUpScreen from '@/components/auth/signup-screen';
 
 export default function Home() {
-  const { userProfile, loading } = useAuth();
+  const { user, userProfile, loading } = useAuth();
   const router = useRouter();
+  const [showLogin, setShowLogin] = useState(true);
 
   useEffect(() => {
-    if (!loading && userProfile?.role) {
+    if (!loading && user && userProfile?.role) {
       router.push(`/${userProfile.role.toLowerCase()}`);
     }
-  }, [userProfile, loading, router]);
+  }, [user, userProfile, loading, router]);
 
-  if (loading || (userProfile && userProfile.role)) {
+  if (loading) {
     return (
        <DashboardLayout>
          <div className="flex items-center justify-center min-h-[calc(100vh-10rem)]">
@@ -41,11 +44,20 @@ export default function Home() {
     );
   }
   
-  // A "fake" user profile exists but they haven't selected a role yet
-  if (userProfile && !userProfile.role) {
+  if (!user) {
+    return showLogin ? <LoginScreen onSwitch={() => setShowLogin(false)} /> : <SignUpScreen onSwitch={() => setShowLogin(true)} />;
+  }
+
+  if (user && !userProfile?.role) {
     return <WelcomeScreen />;
   }
 
-  // This part should ideally not be reached if logic is correct
-  return null;
+  // This should only show for a brief moment during redirection
+  return (
+       <DashboardLayout>
+         <div className="flex items-center justify-center min-h-[calc(100vh-10rem)]">
+             <p>Loading your dashboard...</p>
+         </div>
+       </DashboardLayout>
+    );
 }
