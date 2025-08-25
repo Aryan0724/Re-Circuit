@@ -1,12 +1,11 @@
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
-import { Button } from '@/components/ui/button';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, Moon, Sun, Recycle } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { ChevronRight, Moon, Recycle, Sun } from 'lucide-react';
 import type { UserRole } from '@/types';
 import { useEffect, useState } from 'react';
-
+import { Button } from '@/components/ui/button';
 const roles: { role: UserRole; title: string }[] = [
   { role: 'Citizen', title: 'Citizen' },
   { role: 'Recycler', title: 'NGO/Recycler' },
@@ -14,7 +13,7 @@ const roles: { role: UserRole; title: string }[] = [
   { role: 'Admin', title: 'Admin' },
 ];
 
-export default function Home() {
+function HomeClient() {
   const { loading, setUserRole } = useAuth();
   const [theme, setTheme] = useState('light');
   const [showWelcome, setShowWelcome] = useState(true);
@@ -102,4 +101,8 @@ export default function Home() {
       </AnimatePresence>
     </div>
   );
+}
+
+export default function Home() {
+  return <HomeClient />;
 }

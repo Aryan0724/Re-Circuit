@@ -90,8 +90,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (loading) return;
-
     const isPublicPage = pathname === '/';
     const dashboardPaths: Record<UserRole, string> = {
       Citizen: '/citizen',
@@ -108,10 +106,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else if (!isPublicPage) {
       router.push('/');
     }
-  }, [userProfile, loading, pathname, router]);
+  }, [userProfile, pathname, router]);
 
   const setUserRole = (role: UserRole) => {
-    setLoading(true);
     const baseProfile = mockUsers[role];
     const uid = roleToUidMap[role];
 
@@ -131,7 +128,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else {
         console.error("Invalid role selected");
     }
-    setLoading(false);
   };
   
   const signOut = () => {

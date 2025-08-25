@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Award, Laptop, Smartphone, Medal, Shield, HeartHand, Flame } from 'lucide-react';
+import { Award, Laptop, Smartphone, Medal, Shield, HandHeart, Flame } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Badge {
@@ -13,8 +13,8 @@ interface Badge {
 }
 
 const ALL_BADGES: Badge[] = [
-  { id: 'first-contribution', name: 'First Contribution', description: 'Complete your first pickup.', icon: HeartHand },
-  { id: 'laptop-recycler', name: 'Laptop Recycler', description: 'Recycle your first laptop.', icon: Laptop },
+  { id: 'first-contribution', name: 'First Contribution', description: 'Complete your first pickup.', icon: HandHeart },
+ { id: 'laptop-recycler', name: 'Laptop Recycler', description: 'Recycle your first laptop.', icon: Laptop },
   { id: 'mobile-master', name: 'Mobile Master', description: 'Recycle 5 mobile phones.', icon: Smartphone },
   { id: 'landfill-hero-10kg', name: 'Landfill Hero (10kg)', description: 'Divert over 10kg of waste.', icon: Flame },
   { id: 'eco-veteran', name: 'Eco-Veteran', description: 'Complete 10 pickups.', icon: Shield },
