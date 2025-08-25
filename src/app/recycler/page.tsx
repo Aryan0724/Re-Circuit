@@ -87,15 +87,13 @@ export default async function RecyclerDashboardPage() {
 
         <TabsContent value="pickups" className="mt-6">
             <Suspense fallback={<DashboardLoadingSkeleton />}>
-              {/* RecyclerDashboardClient will handle fetching and displaying pending/accepted */}
-              {/* It will need to be updated to display using cards */}
               <RecyclerDashboardClient initialPendingPickups={pending} initialAcceptedPickups={accepted} />
             </Suspense>
         </TabsContent>
 
         <TabsContent value="your-pickups" className="mt-6">
              <Suspense fallback={<DashboardLoadingSkeleton />}>
-              <RecyclerDashboardClient initialPendingPickups={pending} initialAcceptedPickups={accepted} showOnlyAccepted={true} />
+              <RecyclerDashboardClient initialPendingPickups={pending} initialAcceptedPickups={accepted} />
             </Suspense>
         </TabsContent>
 
