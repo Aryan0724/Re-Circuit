@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import type { UserProfile, UserRole } from '@/types';
 
 // Define mock users for fake authentication
-const mockUsers: Record<UserRole, Omit<UserProfile, 'uid'>> = {
+const mockUsers: Record<UserRole, Omit<UserProfile, 'uid' | 'badges'>> = {
   Citizen: {
     role: 'Citizen',
     name: 'Eco Citizen',
@@ -69,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         uid, 
         ...baseProfile,
         ...storedProfile, // Overwrite with stored edits
+        badges: storedProfile.badges || [], // Ensure badges array exists
       };
       
       if (profile.role === 'Recycler') {
@@ -93,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const isPublicPage = pathname === '/';
     const dashboardPaths: Record<UserRole, string> = {
-      Citizen: '/dashboard',
+      Citizen: '/citizen',
       Recycler: '/recycler',
       Admin: '/admin',
       Contractor: '/contractor',
@@ -116,7 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (baseProfile) {
         localStorage.setItem('userRole', role);
-        const fullProfile = { uid, ...baseProfile };
+        const fullProfile = { uid, ...baseProfile, badges: [] };
 
         if(role === 'Recycler') {
             const storedApproval = localStorage.getItem(`recycler_${uid}_approved`);
@@ -126,7 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Also clear any previous profile edits for that role
         localStorage.removeItem(`user_profile_${uid}`);
 
-        setUserProfile(fullProfile);
+        setUserProfile(fullProfile as UserProfile);
     } else {
         console.error("Invalid role selected");
     }
