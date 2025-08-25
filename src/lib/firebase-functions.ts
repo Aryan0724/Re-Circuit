@@ -3,102 +3,6 @@ import * as admin from 'firebase-admin';
 
 // Initialize Firebase Admin SDK if not already initialized
 if (!admin.apps.length) {
- admin.initializeApp();
-}
-const db = admin.firestore();
-
-/**
- * Interface for the data structure of a pickup request.
- */
-interface PickupRequest {
- status: 'pending' | 'completed' | 'cancelled';
- userId: string;
- category: string;
- impact: {
- co2: number;
- materials: number;
- landfill: number;
- };
-}
-
-/**
- * Interface for the user profile data structure.
- */
-interface UserProfile {
- uid: string;
- badges: string[];
-}
-
-/**
- * Aggregated statistics for a single user's contributions.
- */
-interface UserContributionStats {
- completedPickupCount: number;
- totalCo2Reduced: number;
- totalMaterialsRecovered: number;
- totalWasteDiverted: number;
- categoryCounts: Record<string, number>;
-}
-
-/**
- * Defines the criteria and metadata for each badge.
- */
-const BADGE_CRITERIA: Record<string, (stats: UserContributionStats, existingBadges: string[]) => boolean> = {
- 'first-contribution': (stats) => stats.completedPickupCount >= 1,
- 'laptop-recycler': (stats) => stats.categoryCounts['Laptop'] >= 1,
- 'mobile-master': (stats) => stats.categoryCounts['Mobile'] >= 5,
- 'landfill-hero-10kg': (stats) => stats.totalWasteDiverted >= 10,
-};
-type BadgeId = keyof typeof BADGE_CRITERIA;
-
-
-/**
- * Cloud Function that triggers when a pickup document is updated.
- * It handles aggregating community-wide statistics and awarding badges to users
- * when a pickup's status changes to 'completed'.
- */
-export const onPickupCompleted = functions.firestore
- .document('pickups/{pickupId}')
- .onUpdate(async (change) => {
- const before = change.before.data() as PickupRequest;
- const after = change.after.data() as PickupRequest;
-
- // Exit if status didn't change to 'completed'
- if (before.status === 'completed' || after.status !== 'completed') {
- return null;
- }
-
- const { userId, impact } = after;
- if (!userId || !impact) {
- functions.logger.error('Missing userId or impact data on pickup.', { id: change.after.id });
- return null;
- }
-
- // --- 1. Aggregate Community Statistics ---
- const communityStatsRef = db.doc('stats/communityImpact');
- const increment = admin.firestore.FieldValue.increment;
- try {
- await communityStatsRef.set({
- totalCo2Reduced: increment(impact.co2),
- totalMaterialsRecovered: increment(impact.materials),
- totalWasteDiverted: increment(impact.landfill),
- }, { merge: true });
- functions.logger.log('Community stats updated successfully.');
- } catch (error) {
- functions.logger.error('Error updating community stats:', error);
- }
-
- // TODO: Implement Badge Awarding Logic within a transaction
- // This will query the user's completed pickups, calculate their current stats,
- // check against BADGE_CRITERIA, and update the user document with new badges.
-
- return null;
- });
-import * as functions from 'firebase-functions';
-import * as admin from 'firebase-admin';
-
-// Initialize Firebase Admin SDK if not already initialized
-if (!admin.apps.length) {
   admin.initializeApp();
 }
 const db = admin.firestore();
@@ -126,17 +30,6 @@ interface UserProfile {
 }
 
 /**
- * Defines the criteria and metadata for each badge.
- */
-const BADGE_CRITERIA: Record<string, (stats: UserContributionStats, existingBadges: string[]) => boolean> = {
-  'first-contribution': (stats) => stats.completedPickupCount >= 1,
-  'laptop-recycler': (stats) => stats.categoryCounts['Laptop'] >= 1,
-  'mobile-master': (stats) => stats.categoryCounts['Mobile'] >= 5,
-  'landfill-hero-10kg': (stats) => stats.totalWasteDiverted >= 10,
-};
-type BadgeId = keyof typeof BADGE_CRITERIA;
-
-/**
  * Aggregated statistics for a single user's contributions.
  */
 interface UserContributionStats {
@@ -146,6 +39,17 @@ interface UserContributionStats {
   totalWasteDiverted: number;
   categoryCounts: Record<string, number>;
 }
+
+/**
+ * Defines the criteria and metadata for each badge.
+ */
+const BADGE_CRITERIA: Record<string, (stats: UserContributionStats, existingBadges: string[]) => boolean> = {
+  'first-contribution': (stats) => stats.completedPickupCount >= 1,
+  'laptop-recycler': (stats) => stats.categoryCounts['Laptop'] >= 1,
+  'mobile-master': (stats) => stats.categoryCounts['Mobile'] >= 5,
+  'landfill-hero-10kg': (stats) => stats.totalWasteDiverted >= 10,
+};
+type BadgeId = keyof typeof BADGE_CRITERIA;
 
 
 /**
@@ -196,7 +100,7 @@ export const onPickupCompleted = functions.firestore
         if (!userDoc.exists) {
           throw new Error(`User document ${userId} not found.`);
         }
-        const existingBadges = userDoc.data()?.badges || [];
+        const existingBadges = (userDoc.data() as UserProfile).badges || [];
         const newBadges: BadgeId[] = [];
 
         // Calculate user's total contributions
