@@ -4,7 +4,6 @@
 import DashboardLayout from '@/components/dashboard-layout';
 import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { RoutePlanner } from '@/components/recycler/route-planner';
 import { Suspense, useEffect, useState } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Globe, Leaf, BarChart2, Package } from 'lucide-react';
@@ -55,8 +54,6 @@ function ImpactStatCard({ icon, title, value, unit, description }: { icon: React
 
 
 export default function RecyclerDashboardPage() {
-  const [acceptedPickups, setAcceptedPickups] = useState<PickupRequest[]>([]);
-
   if (!mockUserProfile.approved) {
     return (
         <DashboardLayout>
@@ -74,9 +71,7 @@ export default function RecyclerDashboardPage() {
 
   return (
     <DashboardLayout>
-      <PageHeader title="Recycler Dashboard" subtitle="Manage incoming e-waste pickup requests.">
-        <RoutePlanner acceptedPickups={acceptedPickups} />
-      </PageHeader>
+      <PageHeader title="Recycler Dashboard" subtitle="Manage incoming e-waste pickup requests." />
 
       <Tabs defaultValue="pickups" className="w-full">
         <TabsList className="grid w-full grid-cols-2 md:w-[400px] bg-green-100 text-green-800">
@@ -86,7 +81,7 @@ export default function RecyclerDashboardPage() {
 
         <TabsContent value="pickups" className="mt-6">
             <Suspense fallback={<DashboardLoadingSkeleton />}>
-              <RecyclerDashboardClient setAcceptedPickups={setAcceptedPickups}/>
+              <RecyclerDashboardClient />
             </Suspense>
         </TabsContent>
 

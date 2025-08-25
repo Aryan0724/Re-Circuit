@@ -21,11 +21,8 @@ const mockUserProfile: UserProfile = {
     photoURL: 'https://placehold.co/100x100.png',
 };
 
-interface RecyclerDashboardClientProps {
-    setAcceptedPickups: (pickups: PickupRequest[]) => void;
-}
 
-export function RecyclerDashboardClient({ setAcceptedPickups }: RecyclerDashboardClientProps) {
+export function RecyclerDashboardClient() {
   const [pendingPickups, setPendingPickups] = useState<PickupRequest[]>([]);
   const [acceptedForUser, setAcceptedForUser] = useState<PickupRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,8 +42,7 @@ export function RecyclerDashboardClient({ setAcceptedPickups }: RecyclerDashboar
     const accepted = JSON.parse(localStorage.getItem(`pickups_accepted_${mockUserProfile.uid}`) || '[]');
     setPendingPickups(pending);
     setAcceptedForUser(accepted);
-    setAcceptedPickups(accepted); // Lift state up
-  }, [setAcceptedPickups]);
+  }, []);
 
   useEffect(() => {
     setLoading(true);
