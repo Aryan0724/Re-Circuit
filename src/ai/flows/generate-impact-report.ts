@@ -13,10 +13,16 @@ import {z} from 'genkit';
 
 const GenerateImpactReportInputSchema = z.object({
   contributionSummary: z
-    .string()
-    .describe(
-      "A summary of the user's e-waste contributions. e.g., 'User has contributed: 2 Laptops, 5 Mobiles, 10 Batteries.'"
-    ),
+ .string()
+ .describe(
+ "A summary of the user's e-waste contributions. e.g., 'User has contributed: 2 Laptops, 5 Mobiles, 10 Batteries.'"
+ ),
+ latestBadgeName: z
+ .string()
+ .describe("The name of the user's most recently earned badge. e.g., 'Laptop Recycler'"),
+ communityCo2Total: z
+ .number()
+ .describe('The total community CO₂ reduction in kg.'),
 });
 export type GenerateImpactReportInput = z.infer<typeof GenerateImpactReportInputSchema>;
 
@@ -35,9 +41,7 @@ const prompt = ai.definePrompt({
   name: 'generateImpactReportPrompt',
   input: {schema: GenerateImpactReportInputSchema},
   output: {schema: GenerateImpactReportOutputSchema},
-  prompt: `You are an encouraging environmental assistant. Based on the following e-waste contribution data, write a short, positive, and personalized impact summary (2-3 sentences) for the user. Use a friendly tone and include a real-world analogy to make the impact tangible. For example, 'By recycling 2 laptops, you've saved enough energy to power a home for a week!'
-
-  Data: {{{contributionSummary}}}`,
+  prompt: `You are an encouraging environmental assistant. A user has just generated their impact report. Their contribution data is: {{{contributionSummary}}}. They recently earned the '{{{latestBadgeName}}}' badge. Their contribution is part of a larger community effort that has collectively saved {{{communityCo2Total}}} kg of CO₂. Write a short, celebratory summary (2-3 sentences). Congratulate them on their new badge and mention how their personal effort contributes to the impressive community total. Use a friendly, inspiring tone.`,
 });
 
 const generateImpactReportFlow = ai.defineFlow(
