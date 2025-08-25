@@ -14,7 +14,7 @@ import { useState } from 'react';
 
 const navItemsByRole: Record<UserRole, { href: string; label: string; icon: React.ElementType }[]> = {
   Citizen: [
-    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/citizen', label: 'Dashboard', icon: LayoutDashboard },
   ],
   Recycler: [
     { href: '/recycler', label: 'Dashboard', icon: LayoutDashboard },
@@ -32,6 +32,13 @@ const roleIcons: Record<UserRole, React.ElementType> = {
     Recycler: Recycle,
     Admin: Shield,
     Contractor: HardHat
+}
+
+const dashboardRoutes: Record<UserRole, string> = {
+    Citizen: '/citizen',
+    Recycler: '/recycler',
+    Admin: '/admin',
+    Contractor: '/contractor'
 }
 
 export function AppSidebar() {
@@ -58,7 +65,7 @@ export function AppSidebar() {
     <TooltipProvider>
       <aside className="fixed left-0 top-0 z-10 h-screen w-16 md:w-64 border-r bg-card/50 backdrop-blur-lg flex flex-col transition-all duration-300">
         <div className="flex flex-col items-center md:items-start p-2 md:p-4 border-b">
-          <Link href={`/${userProfile.role.toLowerCase()}`} className="flex items-center gap-2 w-full">
+          <Link href={dashboardRoutes[userProfile.role]} className="flex items-center gap-2 w-full">
             <Recycle className="h-8 w-8 text-primary flex-shrink-0" />
             <span className="text-xl font-bold hidden md:inline">Re-Circuit</span>
           </Link>
