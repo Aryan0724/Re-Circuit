@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { createPickupRequest } from '@/lib/actions';
 import { generatePickupDescription } from '@/ai/flows/generate-pickup-description';
-import { UploadCloud, Loader2, Wand2 } from 'lucide-react';
+import { UploadCloud, Loader2, Wand2, MapPin } from 'lucide-react';
 import Image from 'next/image';
 
 const formSchema = z.object({
@@ -29,6 +29,7 @@ export function PickupRequestForm() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isFetchingLocation, setIsFetchingLocation] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -70,6 +71,28 @@ export function PickupRequestForm() {
       setIsGenerating(false);
     }
   };
+  
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      toast({ variant: 'destructive', title: 'Location Error', description: 'Geolocation is not supported by your browser.' });
+      return;
+    }
+    
+    setIsFetchingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        // In a real app, you'd use a reverse geocoding service here.
+        // For this prototype, we'll use a mock address.
+        form.setValue('address', '123 Main Street, Anytown, USA');
+        toast({ title: 'Location found!' });
+        setIsFetchingLocation(false);
+      },
+      () => {
+        toast({ variant: 'destructive', title: 'Location Error', description: 'Unable to retrieve your location. Please grant permission or enter it manually.' });
+        setIsFetchingLocation(false);
+      }
+    );
+  };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!userProfile) return;
@@ -100,7 +123,7 @@ export function PickupRequestForm() {
   };
 
   return (
-    <Card className="shadow-lg">
+    <Card>
       <CardHeader>
         <CardTitle>New Pickup Request</CardTitle>
         <CardDescription>Fill out the form to schedule a new e-waste pickup.</CardDescription>
@@ -180,14 +203,20 @@ export function PickupRequestForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Pickup Address</FormLabel>
-                  <FormControl>
-                    <Input placeholder="123 Green St, Eco City" {...field} />
-                  </FormControl>
+                  <div className="flex gap-2">
+                    <FormControl>
+                      <Input placeholder="123 Green St, Eco City" {...field} />
+                    </FormControl>
+                    <Button type="button" variant="outline" onClick={handleGetLocation} disabled={isFetchingLocation}>
+                      {isFetchingLocation ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
+                      <span className="sr-only">Use my location</span>
+                    </Button>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full" disabled={isSubmitting || isGenerating}>
+            <Button type="submit" className="w-full" disabled={isSubmitting || isGenerating || isFetchingLocation}>
               {isSubmitting ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...</>
               ) : (
