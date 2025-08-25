@@ -15,6 +15,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatDistanceToNow } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { ContractorDashboardClient } from '@/components/contractor/contractor-dashboard-client';
+
 async function getPickups(userId: string) {
     // NOTE: This is a mock implementation using localStorage.
     // In a real app, you would fetch this data from a database.
