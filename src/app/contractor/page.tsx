@@ -9,10 +9,12 @@ import type { PickupRequest } from '@/types';
 import { Check, X } from 'lucide-react';
 import Image from 'next/image';
 import { RoutePlanner } from '@/components/recycler/route-planner';
-import { Suspense } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ContractorDashboardClient } from '@/components/contractor/contractor-dashboard-client';
-
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { formatDistanceToNow } from 'date-fns';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 async function getPickups(userId: string) {
     // NOTE: This is a mock implementation using localStorage.
     // In a real app, you would fetch this data from a database.

@@ -1,7 +1,7 @@
 
 'use client';
 
-import { DashboardLayout } from '@/components/dashboard-layout';
+import DashboardLayout from '@/components/dashboard-layout';
 import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Award, Package, Star } from 'lucide-react';
@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ImpactDashboard } from '@/components/citizen/impact-dashboard';
 import type { UserProfile } from '@/types';
+import { CitizenLeaderboard } from '@/components/citizen/citizen-leaderboard';
 
 function StatCard({ icon, title, value, color }: { icon: React.ReactNode; title: string; value: string | number; color: string }) {
   return (
@@ -66,9 +67,10 @@ export default function CitizenDashboardPage() {
       </div>
 
       <Tabs defaultValue="pickups" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:w-[400px]">
+        <TabsList className="grid w-full grid-cols-3 md:w-[600px]">
             <TabsTrigger value="pickups">My Pickups</TabsTrigger>
             <TabsTrigger value="impact">My Impact</TabsTrigger>
+            <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
         </TabsList>
         <TabsContent value="pickups" className="mt-6">
              <div className="grid gap-8 lg:grid-cols-5">
@@ -82,6 +84,9 @@ export default function CitizenDashboardPage() {
         </TabsContent>
         <TabsContent value="impact" className="mt-6">
             <ImpactDashboard />
+        </TabsContent>
+        <TabsContent value="leaderboard" className="mt-6">
+            <CitizenLeaderboard />
         </TabsContent>
       </Tabs>
 

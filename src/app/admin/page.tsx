@@ -1,11 +1,12 @@
 'use server';
 
-import { DashboardLayout } from '@/components/dashboard-layout';
+import DashboardLayout from '@/components/dashboard-layout';
 import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, Recycle, Activity, PackageCheck, AlertCircle } from 'lucide-react';
 import { RecyclerManagement } from '@/components/admin/recycler-management';
 import { CitizenLeaderboard } from '@/components/admin/citizen-leaderboard';
+import { CitizenLeaderboard as CitizenLeaderboardForCitizen } from '@/components/citizen/citizen-leaderboard';
 
 function AdminStatCard({ icon, title, value, subtitle }: { icon: React.ReactNode; title: string; value: string | number; subtitle: string; }) {
     return (
@@ -42,7 +43,7 @@ const fetchPlatformStats = async (): Promise<PlatformStats> => {
     };
 };
 
-export default async function AdminDashboardPage() {
+export default async function AdminPage() {
     let stats: PlatformStats | null = null;
     let error: string | null = null;
 
@@ -79,7 +80,7 @@ export default async function AdminDashboardPage() {
                     <RecyclerManagement />
                 </div>
                 <div>
-                    <CitizenLeaderboard />
+                    <CitizenLeaderboardForCitizen />
                 </div>
             </div>
         </DashboardLayout>
