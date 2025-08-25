@@ -1,6 +1,6 @@
 'use server';
 
-import { doc, setDoc, addDoc, collection, updateDoc, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
+import { doc, setDoc, addDoc, collection, updateDoc, serverTimestamp, getDocs, query, where, getDoc } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { db, storage } from './firebase';
 import type { PickupRequest, UserProfile, UserRole, PickupStatus, PickupLocation } from '@/types';
