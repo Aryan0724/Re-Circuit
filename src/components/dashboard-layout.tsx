@@ -3,46 +3,56 @@
 
 import React from 'react';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
-import { Users } from "lucide-react"
+import { Menu, Home, User, Settings, HardHat, Recycle } from "lucide-react"
 import Link from 'next/link';
+import { Separator } from '@/components/ui/separator';
 
 
-const roles = [
-    { name: 'Citizen', href: '/citizen' },
-    { name: 'Admin', href: '/admin' },
-    { name: 'Contractor', href: '/contractor' },
-    { name: 'Recycler', href: '/recycler' },
+const navItems = [
+    { name: 'Home', href: '/', icon: Home },
+    { name: 'Citizen', href: '/citizen', icon: User },
+    { name: 'Admin', href: '/admin', icon: Settings },
+    { name: 'Contractor', href: '/contractor', icon: HardHat },
+    { name: 'Recycler', href: '/recycler', icon: Recycle },
 ];
 
-function RoleSwitcher() {
+function MobileSidebar() {
     return (
-        <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+        <Sheet>
+            <SheetTrigger asChild>
                 <Button variant="outline" size="icon">
-                    <Users className="h-[1.2rem] w-[1.2rem]" />
-                    <span className="sr-only">Switch role</span>
+                    <Menu className="h-5 w-5" />
+                    <span className="sr-only">Open sidebar</span>
                 </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Switch Role</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {roles.map(role => (
-                    <Link href={role.href} key={role.name} passHref>
-                        <DropdownMenuItem>
-                            {role.name}
-                        </DropdownMenuItem>
-                    </Link>
-                ))}
-            </DropdownMenuContent>
-        </DropdownMenu>
+            </SheetTrigger>
+            <SheetContent side="left">
+                <SheetHeader>
+                    <SheetTitle>Re-Circuit</SheetTitle>
+                    <SheetDescription>
+                        E-Waste Management Platform
+                    </SheetDescription>
+                </SheetHeader>
+                <Separator className="my-4" />
+                <div className="flex flex-col space-y-2">
+                    {navItems.map(item => (
+                        <Link href={item.href} key={item.name} passHref>
+                           <Button variant="ghost" className="w-full justify-start gap-2">
+                             <item.icon className="h-4 w-4" />
+                             {item.name}
+                           </Button>
+                        </Link>
+                    ))}
+                </div>
+            </SheetContent>
+        </Sheet>
     );
 }
 
@@ -51,11 +61,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex min-h-screen">
       <div className="flex-1 flex flex-col">
-        <header className="sticky top-0 z-40 w-full border-b bg-background">
+        <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur-sm">
           <div className="container flex h-16 items-center space-x-4 sm:justify-between sm:space-x-0">
+            <div className="flex gap-6 md:gap-10">
+                <Link href="/" className="flex items-center space-x-2">
+                    <Recycle className="h-6 w-6 text-primary" />
+                    <span className="inline-block font-bold">Re-Circuit</span>
+                </Link>
+            </div>
+
             <div className="flex flex-1 items-center justify-end space-x-4">
               <nav className="flex items-center space-x-4">
-                <RoleSwitcher />
+                <MobileSidebar />
               </nav>
             </div>
           </div>
