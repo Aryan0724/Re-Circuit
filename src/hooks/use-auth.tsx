@@ -24,7 +24,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const publicPages = ['/']; // Pages accessible to unauthenticated users
-const welcomePage = '/welcome'; // Page for new users to select a role
+const welcomePage = '/'; // Page for new users to select a role is now the root
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const profile = userDocSnap.data() as UserProfile;
           setUserProfile(profile);
         } else {
-          // This is a new user, they will be redirected to the welcome screen
+          // This is a new user, they will stay on the welcome screen
           // to create their profile.
           setUserProfile(null);
         }
@@ -63,27 +63,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (loading) return;
 
     const isPublicPage = publicPages.includes(pathname);
-    const isOnWelcomePage = pathname === welcomePage;
 
-    if (user) {
-      if (userProfile) {
-        // User is logged in and has a profile
-        const dashboardPath = `/${userProfile.role.toLowerCase()}`;
-        if (pathname !== dashboardPath && !isOnWelcomePage) {
-          router.push(dashboardPath);
-        }
-      } else {
-        // User is logged in but has no profile, redirect to welcome
-        if (!isOnWelcomePage) {
-          router.push(welcomePage);
-        }
+    if (user && userProfile) {
+      // User is logged in and has a profile, redirect to their dashboard
+      const dashboardPath = `/${userProfile.role.toLowerCase()}`;
+      if (pathname !== dashboardPath) {
+        router.push(dashboardPath);
       }
-    } else {
-      // No user is logged in
-      if (!isPublicPage && !isOnWelcomePage) {
-        router.push('/');
-      }
+    } else if (!user && !isPublicPage) {
+      // No user, and not on a public page, redirect to home to log in
+      router.push('/');
     }
+    // If user is logged in but no profile, they stay on the root page (which shows WelcomeScreen).
+    // If no user is logged in, they stay on the root page (which shows LoginScreen).
+
   }, [user, userProfile, loading, pathname, router]);
 
   const signInWithGoogle = async () => {
@@ -130,10 +123,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           newUserProfile = { ...baseProfile, role: 'Recycler', approved: false };
           break;
         case 'Contractor':
-          newUserProfile = { ...baseProfile, role: 'Contractor', badges: [] };
+          newUserProfile = { ...baseProfile, role: 'Contractor' };
           break;
         case 'Admin':
-           newUserProfile = { ...baseProfile, role: 'Admin', badges: [] };
+           newUserProfile = { ...baseProfile, role: 'Admin' };
            break;
         default:
           throw new Error(`Invalid role selected: ${role}`);

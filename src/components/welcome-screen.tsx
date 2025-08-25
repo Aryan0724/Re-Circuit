@@ -1,6 +1,4 @@
 import React, { useState } from 'react';
-import { doc, setDoc } from 'firebase/firestore';
-import { db, app } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -11,7 +9,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
-import type { UserRole, UserProfile } from '@/types';
+import type { UserRole } from '@/types';
 import { useAuth } from '@/hooks/use-auth';
 
 // Admin role is assigned manually, not selectable on signup

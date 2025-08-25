@@ -12,7 +12,7 @@ export interface UserProfile {
   credits?: number; // Only for citizens
   approved?: boolean; // Only for recyclers
   phone?: string;
-  badges: string[];
+  badges?: string[];
 }
 
 export type PickupStatus = 'pending' | 'accepted' | 'completed' | 'rejected';
