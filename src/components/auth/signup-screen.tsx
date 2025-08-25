@@ -43,19 +43,26 @@ export default function SignUpScreen({ onSwitch }: SignUpScreenProps) {
       toast({ title: 'Account created successfully!', description: 'Please select your role to continue.' });
       // The useAuth hook will handle redirection to the welcome screen
     } catch (error: any) {
-        let errorMessage = 'An unknown error occurred.';
-        if (error.message) {
+        let errorMessage = 'An unknown error occurred. Please check the console for more details or contact support.';
+        // This will catch the custom error thrown from the useAuth hook for a duplicate username
+        if (error.message === 'Username is already taken.') {
             errorMessage = error.message;
         } else if (error.code) {
              switch(error.code) {
                 case 'auth/email-already-in-use':
-                    errorMessage = 'This email is already in use.';
+                    errorMessage = 'This email address is already in use by another account.';
                     break;
                 case 'auth/weak-password':
-                    errorMessage = 'The password is too weak.';
+                    errorMessage = 'The password is too weak. Please use at least 6 characters.';
+                    break;
+                case 'auth/invalid-email':
+                    errorMessage = 'The email address is not valid.';
+                    break;
+                 case 'permission-denied': // Firestore permission error
+                    errorMessage = 'There was a problem setting up your profile. Please contact support.';
                     break;
                 default:
-                    errorMessage = 'Failed to create account. Please try again.';
+                    errorMessage = `An unexpected error occurred: ${error.code}`;
                     break;
             }
         }
