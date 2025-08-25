@@ -116,7 +116,7 @@ export function PickupRequestForm() {
             citizenName: mockUser.name,
             category: values.category,
             description: values.description,
-            location: { displayAddress: values.address, lat: 0, lon: 0 },
+            location: { displayAddress: values.address, lat: 40.7128, lon: -74.0060 }, // Valid coordinates
             photoURL: preview,
             status: 'pending',
             createdAt: new Date(),

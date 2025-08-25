@@ -7,12 +7,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Download, Package, Route } from 'lucide-react';
+import { Download, Route } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import type { PickupRequest, PickupStatus, PickupLocation } from '@/types';
 import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import Image from 'next/image';
+import { useToast } from '@/hooks/use-toast';
 
 const statusColors: Record<PickupStatus, string> = {
   pending: 'bg-yellow-500',
@@ -27,11 +28,18 @@ export function ContractorTable() {
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({ status: 'all', category: 'all', location: '' });
   const [selectedPickup, setSelectedPickup] = useState<PickupRequest | null>(null);
+  const { toast } = useToast();
 
   const handleGetDirections = (location: PickupLocation) => {
     if (location && location.lat && location.lon) {
       const url = `https://www.google.com/maps/dir/?api=1&destination=${location.lat},${location.lon}`;
       window.open(url, '_blank');
+    } else {
+        toast({
+            variant: 'destructive',
+            title: 'Invalid Location',
+            description: 'The location for this pickup is not valid.',
+        });
     }
   };
 

@@ -34,6 +34,12 @@ export function RecyclerDashboardClient({ initialPendingPickups, initialAccepted
     if (location && location.lat && location.lon) {
       const url = `https://www.google.com/maps/dir/?api=1&destination=${location.lat},${location.lon}`;
       window.open(url, '_blank');
+    } else {
+        toast({
+            variant: 'destructive',
+            title: 'Invalid Location',
+            description: 'The location for this pickup is not valid.',
+        });
     }
   };
 
