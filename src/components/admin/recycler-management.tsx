@@ -6,7 +6,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import type { UserProfile } from '@/types';
-import { approveRecycler } from '@/lib/actions';
 
 const mockRecyclers: UserProfile[] = [
     { uid: 'recycler-001', role: 'Recycler', name: 'Green Recyclers', email: 'recycler@example.com', photoURL: 'https://placehold.co/100x100.png', approved: false },
@@ -31,16 +30,16 @@ export function RecyclerManagement() {
     setLoading(false);
   }, []);
 
-  const handleApprovalChange = async (uid: string, approved: boolean) => {
-    const result = await approveRecycler(uid, approved);
-    if (result.success) {
-        // Also update our mock state and localStorage
+  const handleApprovalChange = (uid: string, approved: boolean) => {
+    try {
         localStorage.setItem(`recycler_${uid}_approved`, String(approved));
         setRecyclers(currentRecyclers => 
             currentRecyclers.map(r => r.uid === uid ? { ...r, approved } : r)
         );
         toast({ title: `Recycler ${approved ? 'approved' : 'unapproved'}.` });
-    } else {
+        // Dispatch an event so other parts of the app can react if needed
+        window.dispatchEvent(new CustomEvent('recycler-approval-changed', { detail: { uid, approved } }));
+    } catch (error) {
         toast({ variant: 'destructive', title: 'Error', description: 'Could not update recycler status.' });
     }
   };
@@ -75,7 +74,7 @@ export function RecyclerManagement() {
               <div className="flex items-center gap-2">
                 <span className="text-sm">{recycler.approved ? 'Approved' : 'Pending'}</span>
                 <Switch
-                  checked={recycler.approved}
+                  checked={!!recycler.approved}
                   onCheckedChange={(checked) => handleApprovalChange(recycler.uid, checked)}
                   aria-label={`Approve ${recycler.name}`}
                 />
