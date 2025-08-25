@@ -1,25 +1,24 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import type { PickupRequest, UserProfile, PickupLocation } from '@/types';
+import type { PickupRequest, PickupLocation } from '@/types';
 import { Check, X, Route } from 'lucide-react';
 import Image from 'next/image';
 import { useAuth } from '@/hooks/use-auth';
 
 interface RecyclerDashboardClientProps {
-    initialPendingPickups: PickupRequest[];
-    initialAcceptedPickups: PickupRequest[];
+    setAcceptedPickups: (pickups: PickupRequest[]) => void;
 }
 
-export function RecyclerDashboardClient({ initialPendingPickups, initialAcceptedPickups }: RecyclerDashboardClientProps) {
+export function RecyclerDashboardClient({ setAcceptedPickups }: RecyclerDashboardClientProps) {
   const { userProfile } = useAuth();
-  const [pendingPickups, setPendingPickups] = useState<PickupRequest[]>(initialPendingPickups);
-  const [acceptedPickups, setAcceptedPickups] = useState<PickupRequest[]>(initialAcceptedPickups);
+  const [pendingPickups, setPendingPickups] = useState<PickupRequest[]>([]);
+  const [acceptedForUser, setAcceptedForUser] = useState<PickupRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -37,8 +36,9 @@ export function RecyclerDashboardClient({ initialPendingPickups, initialAccepted
     const pending = JSON.parse(localStorage.getItem('pickups_pending') || '[]');
     const accepted = JSON.parse(localStorage.getItem(`pickups_accepted_${userProfile.uid}`) || '[]');
     setPendingPickups(pending);
-    setAcceptedPickups(accepted);
-  }, [userProfile]);
+    setAcceptedForUser(accepted);
+    setAcceptedPickups(accepted); // Lift state up
+  }, [userProfile, setAcceptedPickups]);
 
   useEffect(() => {
     setLoading(true);
@@ -52,24 +52,24 @@ export function RecyclerDashboardClient({ initialPendingPickups, initialAccepted
   const handleUpdateStatus = (pickup: PickupRequest, status: 'accepted' | 'rejected' | 'completed') => {
       if (!userProfile) return;
 
+      // Update pending list
       const currentPending = JSON.parse(localStorage.getItem('pickups_pending') || '[]');
       const newPending = currentPending.filter((p: PickupRequest) => p.id !== pickup.id);
       localStorage.setItem('pickups_pending', JSON.stringify(newPending));
 
+      // Update accepted list
+      const acceptedKey = `pickups_accepted_${userProfile.uid}`;
+      let currentAccepted = JSON.parse(localStorage.getItem(acceptedKey) || '[]');
+      
       if (status === 'accepted') {
-        const acceptedKey = `pickups_accepted_${userProfile.uid}`;
-        const currentAccepted = JSON.parse(localStorage.getItem(acceptedKey) || '[]');
         const updatedPickup = { ...pickup, status: 'accepted' as const, recyclerId: userProfile.uid };
-        localStorage.setItem(acceptedKey, JSON.stringify([updatedPickup, ...currentAccepted]));
+        currentAccepted = [updatedPickup, ...currentAccepted];
+      } else if (status === 'completed') {
+        currentAccepted = currentAccepted.filter((p: PickupRequest) => p.id !== pickup.id);
       }
-       
-      if (status === 'completed') {
-        const acceptedKey = `pickups_accepted_${userProfile.uid}`;
-        const currentAccepted = JSON.parse(localStorage.getItem(acceptedKey) || '[]');
-        const newAccepted = currentAccepted.filter((p: PickupRequest) => p.id !== pickup.id);
-        localStorage.setItem(acceptedKey, JSON.stringify(newAccepted));
-      }
-
+      localStorage.setItem(acceptedKey, JSON.stringify(currentAccepted));
+      
+      // Update the original citizen's pickup list
       const citizenKey = `pickups_${pickup.citizenId}`;
       const citizenPickups = JSON.parse(localStorage.getItem(citizenKey) || '[]');
       const updatedCitizenPickups = citizenPickups.map((p: PickupRequest) => 
@@ -77,23 +77,11 @@ export function RecyclerDashboardClient({ initialPendingPickups, initialAccepted
       );
       localStorage.setItem(citizenKey, JSON.stringify(updatedCitizenPickups));
 
+      // Notify all components
       window.dispatchEvent(new CustomEvent('pickups-updated'));
       toast({ title: `Request ${status}` });
   }
 
-  if (!userProfile?.approved) {
-    return (
-        <div className="flex items-center justify-center h-full">
-            <Card className="max-w-lg text-center p-8">
-                <CardHeader>
-                    <CardTitle>Approval Pending</CardTitle>
-                    <CardDescription>Your account is awaiting approval from an administrator. You will be able to see pickup requests once approved.</CardDescription>
-                </CardHeader>
-            </Card>
-        </div>
-    )
-  }
-  
   return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <Card className="shadow-lg">
@@ -130,8 +118,8 @@ export function RecyclerDashboardClient({ initialPendingPickups, initialAccepted
             <CardDescription>Items you've scheduled for pickup.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 max-h-[600px] overflow-y-auto">
-             {loading ? <Skeleton className="h-32 w-full" /> : acceptedPickups.length === 0 ? <p className="text-muted-foreground text-center py-8">You have no accepted pickups.</p> :
-              acceptedPickups.map(pickup => (
+             {loading ? <Skeleton className="h-32 w-full" /> : acceptedForUser.length === 0 ? <p className="text-muted-foreground text-center py-8">You have no accepted pickups.</p> :
+              acceptedForUser.map(pickup => (
                 <div key={pickup.id}>
                     <div className="p-4 rounded-lg bg-muted/30">
                         <div className="flex gap-4 items-center">

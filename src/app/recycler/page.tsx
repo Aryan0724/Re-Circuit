@@ -1,25 +1,17 @@
 
-'use server';
+'use client';
 
 import DashboardLayout from '@/components/dashboard-layout';
 import { PageHeader } from '@/components/page-header';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import type { PickupRequest } from '@/types';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { RoutePlanner } from '@/components/recycler/route-planner';
-import { Suspense } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Globe, Leaf, BarChart2, Package } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RecyclerDashboardClient } from '@/components/recycler/recycler-dashboard-client';
-
-async function getPickups(userId: string) {
-    // NOTE: This is a mock implementation.
-    // In a real app, you would fetch this data from a database on the server.
-    // Since auth is removed, we'll return empty arrays for this server component.
-    const pending: PickupRequest[] = [];
-    const accepted: PickupRequest[] = [];
-    return { pending, accepted };
-}
+import type { PickupRequest } from '@/types';
+import { useAuth } from '@/hooks/use-auth';
 
 interface RecyclerStats {
     totalEWasteKg: number;
@@ -28,10 +20,9 @@ interface RecyclerStats {
     itemsRecycled: number;
 }
 
-// Mock function to simulate fetching recycler impact statistics
 const fetchRecyclerStats = async (userId: string): Promise<RecyclerStats> => {
     // In a real app, you'd fetch this from your database based on the recycler's completed pickups.
-    await new Promise(resolve => setTimeout(resolve, 1000)); 
+    await new Promise(resolve => setTimeout(resolve, 500)); 
     return {
         totalEWasteKg: 1500,
         co2SavedTonnes: 3.5,
@@ -53,10 +44,17 @@ function ImpactStatCard({ icon, title, value, unit, description }: { icon: React
 }
 
 
-export default async function RecyclerDashboardPage() {
-  const userProfile = { uid: 'recycler-001', name: 'Green Recyclers', role: 'Recycler' as const, approved: true };
+export default function RecyclerDashboardPage() {
+  const { userProfile } = useAuth();
 
-   if (!userProfile.approved) {
+  // Accepted pickups are now managed within the client component
+  const [acceptedPickups, setAcceptedPickups] = useState<PickupRequest[]>([]);
+
+  if (!userProfile) {
+      return <DashboardLayout><p>Loading...</p></DashboardLayout>
+  }
+  
+  if (!userProfile.approved) {
     return (
         <DashboardLayout>
             <div className="flex items-center justify-center h-full">
@@ -71,30 +69,21 @@ export default async function RecyclerDashboardPage() {
     )
   }
 
-  const { pending, accepted } = await getPickups(userProfile.uid);
-
   return (
     <DashboardLayout>
       <PageHeader title="Recycler Dashboard" subtitle="Manage incoming e-waste pickup requests.">
-        <RoutePlanner acceptedPickups={accepted} />
+        <RoutePlanner acceptedPickups={acceptedPickups} />
       </PageHeader>
 
       <Tabs defaultValue="pickups" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 md:w-[600px] bg-green-100 text-green-800">
+        <TabsList className="grid w-full grid-cols-2 md:w-[400px] bg-green-100 text-green-800">
             <TabsTrigger value="pickups">Pickup Requests</TabsTrigger>
-            <TabsTrigger value="your-pickups">Your Pickups</TabsTrigger>
             <TabsTrigger value="impact">Your Impact</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pickups" className="mt-6">
             <Suspense fallback={<DashboardLoadingSkeleton />}>
-              <RecyclerDashboardClient initialPendingPickups={pending} initialAcceptedPickups={accepted} />
-            </Suspense>
-        </TabsContent>
-
-        <TabsContent value="your-pickups" className="mt-6">
-             <Suspense fallback={<DashboardLoadingSkeleton />}>
-              <RecyclerDashboardClient initialPendingPickups={pending} initialAcceptedPickups={accepted} />
+              <RecyclerDashboardClient setAcceptedPickups={setAcceptedPickups}/>
             </Suspense>
         </TabsContent>
 
@@ -108,8 +97,14 @@ export default async function RecyclerDashboardPage() {
   );
 }
 
-async function ImpactSection({ userId }: { userId: string }) {
-    const stats = await fetchRecyclerStats(userId);
+function ImpactSection({ userId }: { userId: string }) {
+    const [stats, setStats] = useState<RecyclerStats | null>(null);
+    useEffect(() => {
+        fetchRecyclerStats(userId).then(setStats);
+    }, [userId]);
+
+    if (!stats) return <ImpactLoadingSkeleton />;
+
     return (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
              <ImpactStatCard icon={<Globe className="h-5 w-5" />} title="Total E-Waste Recycled" value={stats.totalEWasteKg} unit="kg" description="Your contribution to a cleaner planet." />
@@ -117,7 +112,7 @@ async function ImpactSection({ userId }: { userId: string }) {
              <ImpactStatCard icon={<BarChart2 className="h-5 w-5" />} title="Pickups Completed" value={stats.pickupsCompleted} unit="" description="Successful collections you've made." />
              <ImpactStatCard icon={<Package className="h-5 w-5" />} title="Items Recycled" value={stats.itemsRecycled} unit="" description="Individual items processed." />
         </div>
-  );
+    );
 }
 
 function DashboardLoadingSkeleton() {
