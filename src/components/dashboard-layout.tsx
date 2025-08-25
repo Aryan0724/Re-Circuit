@@ -7,6 +7,9 @@ import {
   SheetContent,
   SheetTrigger,
   SheetClose,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
 } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Menu, LogOut, User } from "lucide-react"
@@ -41,6 +44,12 @@ function MobileSidebar() {
                 </Button>
             </SheetTrigger>
             <SheetContent side="left" className="p-0">
+                 <SheetHeader>
+                    <SheetTitle className="sr-only">User Menu</SheetTitle>
+                    <SheetDescription className="sr-only">
+                        User profile, settings, and sign out options.
+                    </SheetDescription>
+                </SheetHeader>
                  <div className="flex flex-col h-full">
                      <div className="p-4 border-b">
                          <div className="flex items-center gap-4">
