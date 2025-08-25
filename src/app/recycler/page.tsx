@@ -49,6 +49,7 @@ function ImpactStatCard({ icon, title, value, unit, description }: { icon: React
             </CardHeader>
             <CardContent><div className="text-2xl font-bold">{value}<span className="text-sm font-normal"> {unit}</span></div><p className="text-xs text-green-700">{description}</p></CardContent>
         </Card>
+    );
 }
 
 
