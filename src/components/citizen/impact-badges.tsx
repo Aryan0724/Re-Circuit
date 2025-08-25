@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Award, FirstAidKit, Laptop, Smartphone, Weight, ShieldCheck } from 'lucide-react';
+import { Award, Laptop, Smartphone, Medal, Shield, HeartHand, Flame } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Badge {
@@ -13,11 +13,12 @@ interface Badge {
 }
 
 const ALL_BADGES: Badge[] = [
-  { id: 'first-contribution', name: 'First Contribution', description: 'Complete your first pickup.', icon: FirstAidKit },
+  { id: 'first-contribution', name: 'First Contribution', description: 'Complete your first pickup.', icon: HeartHand },
   { id: 'laptop-recycler', name: 'Laptop Recycler', description: 'Recycle your first laptop.', icon: Laptop },
   { id: 'mobile-master', name: 'Mobile Master', description: 'Recycle 5 mobile phones.', icon: Smartphone },
-  { id: 'landfill-hero-10kg', name: 'Landfill Hero (10kg)', description: 'Divert over 10kg of waste.', icon: Weight },
-  { id: 'eco-veteran', name: 'Eco-Veteran', description: 'Complete 10 pickups.', icon: ShieldCheck },
+  { id: 'landfill-hero-10kg', name: 'Landfill Hero (10kg)', description: 'Divert over 10kg of waste.', icon: Flame },
+  { id: 'eco-veteran', name: 'Eco-Veteran', description: 'Complete 10 pickups.', icon: Shield },
+  { id: 'top-contributor', name: 'Top Contributor', description: 'Reach 500 credits.', icon: Medal },
 ];
 
 interface BadgesProps {
@@ -36,6 +37,7 @@ export function Badges({ earnedBadges }: BadgesProps) {
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4 text-center">
             {ALL_BADGES.map((badge) => {
               const isEarned = earnedBadges.includes(badge.id);
+              const BadgeIcon = badge.icon;
               return (
                 <Tooltip key={badge.id}>
                   <TooltipTrigger>
@@ -45,7 +47,7 @@ export function Badges({ earnedBadges }: BadgesProps) {
                         isEarned ? 'border-primary/50 bg-primary/10' : 'border-dashed border-muted-foreground/30 bg-muted/30 opacity-60'
                       )}
                     >
-                      <badge.icon
+                      <BadgeIcon
                         className={cn(
                           'h-12 w-12',
                           isEarned ? 'text-primary' : 'text-muted-foreground'
