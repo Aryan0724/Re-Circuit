@@ -7,11 +7,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Download, Package } from 'lucide-react';
+import { Download, Package, Route } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import type { PickupRequest, PickupStatus } from '@/types';
+import type { PickupRequest, PickupStatus, PickupLocation } from '@/types';
 import { format } from 'date-fns';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import Image from 'next/image';
 
 const statusColors: Record<PickupStatus, string> = {
@@ -27,6 +27,13 @@ export function ContractorTable() {
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({ status: 'all', category: 'all', location: '' });
   const [selectedPickup, setSelectedPickup] = useState<PickupRequest | null>(null);
+
+  const handleGetDirections = (location: PickupLocation) => {
+    if (location && location.lat && location.lon) {
+      const url = `https://www.google.com/maps/dir/?api=1&destination=${location.lat},${location.lon}`;
+      window.open(url, '_blank');
+    }
+  };
 
   const refreshAllPickups = () => {
     const allPickups: PickupRequest[] = [];
@@ -196,6 +203,12 @@ export function ContractorTable() {
                          {selectedPickup.recyclerId && <div><span className="font-semibold">Handled by:</span> {selectedPickup.recyclerId}</div>}
                     </div>
                 </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => handleGetDirections(selectedPickup.location)}>
+                        <Route className="mr-2 h-4 w-4" />
+                        Get Directions
+                    </Button>
+                </DialogFooter>
                 </>
             )}
         </DialogContent>

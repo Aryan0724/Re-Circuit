@@ -6,8 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import type { PickupRequest, UserProfile } from '@/types';
-import { Check, X } from 'lucide-react';
+import type { PickupRequest, UserProfile, PickupLocation } from '@/types';
+import { Check, X, Route } from 'lucide-react';
 import Image from 'next/image';
 
 interface RecyclerDashboardClientProps {
@@ -24,12 +24,18 @@ const mockRecyclerUser: UserProfile = {
   approved: true
 }
 
-
 export function RecyclerDashboardClient({ initialPendingPickups, initialAcceptedPickups }: RecyclerDashboardClientProps) {
   const [pendingPickups, setPendingPickups] = useState<PickupRequest[]>(initialPendingPickups);
   const [acceptedPickups, setAcceptedPickups] = useState<PickupRequest[]>(initialAcceptedPickups);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+
+  const handleGetDirections = (location: PickupLocation) => {
+    if (location && location.lat && location.lon) {
+      const url = `https://www.google.com/maps/dir/?api=1&destination=${location.lat},${location.lon}`;
+      window.open(url, '_blank');
+    }
+  };
 
   const refreshPickups = () => {
     const pending = JSON.parse(localStorage.getItem('pickups_pending') || '[]');
@@ -127,7 +133,10 @@ export function RecyclerDashboardClient({ initialPendingPickups, initialAccepted
                                 <p className="font-semibold">{pickup.category}</p>
                                 <p className="text-sm text-muted-foreground">{pickup.location.displayAddress}</p>
                             </div>
-                            <Button size="sm" onClick={() => handleUpdateStatus(pickup, 'completed')}><Check className="h-4 w-4 mr-1" />Mark Complete</Button>
+                            <div className="flex flex-col gap-2">
+                                <Button size="sm" onClick={() => handleUpdateStatus(pickup, 'completed')}><Check className="h-4 w-4 mr-1" />Mark Complete</Button>
+                                <Button size="sm" variant="secondary" onClick={() => handleGetDirections(pickup.location)}><Route className="h-4 w-4 mr-1"/>Get Directions</Button>
+                            </div>
                         </div>
                     </div>
                 </div>
