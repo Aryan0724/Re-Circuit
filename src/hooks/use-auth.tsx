@@ -3,6 +3,8 @@
 import React, { useState, useEffect, createContext, useContext, type ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import type { UserProfile, UserRole } from '@/types';
+import { db } from '@/lib/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 // Define mock users for fake authentication
 const mockUsers: Record<UserRole, UserProfile> = {
@@ -38,6 +40,21 @@ const mockUsers: Record<UserRole, UserProfile> = {
   },
 };
 
+// Function to create user document in Firestore if it doesn't exist
+const createUserDocument = async (user: UserProfile) => {
+  if (!user) return;
+  const userRef = doc(db, 'users', user.uid);
+  const userSnap = await getDoc(userRef);
+  if (!userSnap.exists()) {
+    try {
+      await setDoc(userRef, user);
+    } catch (error) {
+      console.error("Error creating user document:", error);
+    }
+  }
+};
+
+
 interface AuthContextType {
   user: UserProfile | null;
   userProfile: UserProfile | null;
@@ -59,7 +76,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Check for a "logged in" user in localStorage
     const storedRole = localStorage.getItem('userRole') as UserRole | null;
     if (storedRole && mockUsers[storedRole]) {
-      setUserProfile(mockUsers[storedRole]);
+      const profile = mockUsers[storedRole];
+      setUserProfile(profile);
+      createUserDocument(profile);
     }
     setLoading(false);
   }, []);
@@ -98,9 +117,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const setUserRole = async (role: UserRole) => {
     setLoading(true);
-    if (mockUsers[role]) {
+    const profile = mockUsers[role];
+    if (profile) {
+      await createUserDocument(profile);
       localStorage.setItem('userRole', role);
-      setUserProfile(mockUsers[role]);
+      setUserProfile(profile);
     } else {
       console.error("Invalid role selected");
     }
