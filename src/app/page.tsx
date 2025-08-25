@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
@@ -7,6 +6,8 @@ import { ChevronRight, Moon, Recycle, Sun } from 'lucide-react';
 import type { UserRole } from '@/types';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+
 const roles: { role: UserRole; title: string }[] = [
   { role: 'Citizen', title: 'Citizen' },
   { role: 'Recycler', title: 'NGO/Recycler' },
@@ -14,21 +15,73 @@ const roles: { role: UserRole; title: string }[] = [
   { role: 'Admin', title: 'Admin' },
 ];
 
-function HomeClient() {
-  const { loading, setUserRole } = useAuth();
+function WelcomeAnimation({ onFinish }: { onFinish: () => void }) {
+    useEffect(() => {
+        const timer = setTimeout(onFinish, 2000); // 2 seconds
+        return () => clearTimeout(timer);
+    }, [onFinish]);
+    
+    return (
+        <motion.div
+            key="welcome"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.5, ease: 'easeIn' } }}
+            transition={{ duration: 0.8 }}
+            className="text-center flex flex-col items-center gap-2"
+        >
+            <Recycle className="h-24 w-24 text-primary" />
+            <h1 className="text-6xl font-bold text-primary">Re-Circuit</h1>
+        </motion.div>
+    )
+}
+
+function RoleSelector() {
+    const { setUserRole } = useAuth();
+    
+    return (
+        <motion.div
+            key="role-selection"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="w-full max-w-sm text-center"
+        >
+            <div className="text-center flex flex-col items-center gap-2 mb-8">
+                <Recycle className="h-16 w-16 text-primary" />
+                <h1 className="text-5xl font-bold text-primary">Re-Circuit</h1>
+                <p className="mt-2 text-muted-foreground">Welcome! Please select your role to begin.</p>
+            </div>
+
+            <div className="space-y-3">
+                {roles.map(({ role, title }) => (
+                <Button
+                    key={role}
+                    variant="outline"
+                    size="lg"
+                    className="w-full justify-between text-base py-6 bg-card hover:bg-accent/50"
+                    onClick={() => setUserRole(role)}
+                >
+                    {title}
+                    <ChevronRight className="h-5 w-5" />
+                </Button>
+                ))}
+            </div>
+        </motion.div>
+    )
+}
+
+
+export default function Home() {
+  const { loading, userProfile } = useAuth();
   const [theme, setTheme] = useState('light');
   const [showWelcome, setShowWelcome] = useState(true);
 
   useEffect(() => {
+    // Determine theme
     const storedTheme = localStorage.getItem('theme') || 'light';
     setTheme(storedTheme);
     document.documentElement.classList.toggle('dark', storedTheme === 'dark');
-
-    const welcomeTimer = setTimeout(() => {
-        setShowWelcome(false);
-    }, 2000); // show welcome for 2 seconds
-
-    return () => clearTimeout(welcomeTimer);
   }, []);
 
   const toggleTheme = () => {
@@ -38,12 +91,19 @@ function HomeClient() {
     document.documentElement.classList.toggle('dark', newTheme === 'dark');
   };
 
+  // If auth state is loading, show a spinner
   if (loading) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
+  }
+  
+  // If user is logged in, they will be redirected by the useAuth hook.
+  // This page is for unauthenticated users.
+  if (userProfile) {
+    return null;
   }
 
   return (
@@ -56,54 +116,13 @@ function HomeClient() {
         </Button>
       </div>
       
-      <AnimatePresence>
+      <AnimatePresence mode="wait">
         {showWelcome ? (
-            <motion.div
-                key="welcome"
-                initial={{ opacity: 0, y: 0 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20, transition: { duration: 0.5, ease: 'easeIn' } }}
-                transition={{ duration: 0.8 }}
-                className="text-center flex flex-col items-center gap-2"
-            >
-                <Recycle className="h-24 w-24 text-primary" />
-                <h1 className="text-6xl font-bold text-primary">Re-Circuit</h1>
-            </motion.div>
+            <WelcomeAnimation onFinish={() => setShowWelcome(false)} />
         ) : (
-            <motion.div
-                key="role-selection"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-                className="w-full max-w-sm text-center"
-            >
-                <div className="text-center flex flex-col items-center gap-2 mb-8">
-                    <Recycle className="h-16 w-16 text-primary" />
-                    <h1 className="text-5xl font-bold text-primary">Re-Circuit</h1>
-                    <p className="mt-2 text-muted-foreground">Welcome! Please select your role to begin.</p>
-                </div>
-
-                <div className="space-y-3">
-                    {roles.map(({ role, title }) => (
-                    <Button
-                        key={role}
-                        variant="outline"
-                        size="lg"
-                        className="w-full justify-between text-base py-6 bg-card hover:bg-accent/50"
-                        onClick={() => setUserRole(role)}
-                    >
-                        {title}
-                        <ChevronRight className="h-5 w-5" />
-                    </Button>
-                    ))}
-                </div>
-            </motion.div>
+            <RoleSelector />
         )}
       </AnimatePresence>
     </div>
   );
-}
-
-export default function Home() {
-  return <HomeClient />;
 }

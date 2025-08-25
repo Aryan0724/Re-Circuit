@@ -1,53 +1,23 @@
 'use client';
 
 import React, { useState, useEffect, createContext, useContext, type ReactNode } from 'react';
+import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut as firebaseSignOut, type User } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useRouter, usePathname } from 'next/navigation';
 import type { UserProfile, UserRole } from '@/types';
+import { auth, db } from '@/lib/firebase'; // Assuming firebase.ts exports auth and db
 
-// Define mock users for fake authentication
-const mockUsers: Record<UserRole, Omit<UserProfile, 'uid' | 'badges'>> = {
-  Citizen: {
-    role: 'Citizen',
-    name: 'Eco Citizen',
-    email: 'citizen@example.com',
-    photoURL: 'https://placehold.co/100x100.png',
-    credits: 420,
-  },
-  Recycler: {
-    role: 'Recycler',
-    name: 'Green Recyclers',
-    email: 'recycler@example.com',
-    photoURL: 'https://placehold.co/100x100.png',
-    approved: false, // Default to not approved
-  },
-  Admin: {
-    role: 'Admin',
-    name: 'Platform Admin',
-    email: 'admin@example.com',
-    photoURL: 'https://placehold.co/100x100.png',
-  },
-  Contractor: {
-    role: 'Contractor',
-    name: 'Govt Contractor',
-    email: 'contractor@example.com',
-    photoURL: 'https://placehold.co/100x100.png',
-  },
-};
+const googleProvider = new GoogleAuthProvider();
 
-const roleToUidMap: Record<UserRole, string> = {
-    Citizen: 'citizen-001',
-    Recycler: 'recycler-001',
-    Admin: 'admin-001',
-    Contractor: 'contractor-001',
-}
+const USERS_COLLECTION = 'artifacts/recircuit/public/data/users'; // Secure path as requested
 
 
 interface AuthContextType {
   userProfile: UserProfile | null;
   loading: boolean;
-  signOut: () => void;
   setUserRole: (role: UserRole) => void;
-  updateUserProfile: (updates: Partial<Pick<UserProfile, 'name' | 'photoURL'>>) => void;
+  updateUserProfile: (updates: Partial<UserProfile>) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -57,42 +27,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
 
-  const loadProfile = () => {
-    const storedRole = localStorage.getItem('userRole') as UserRole | null;
-    if (storedRole) {
-      const uid = roleToUidMap[storedRole];
-      const baseProfile = mockUsers[storedRole];
-      const storedProfile = JSON.parse(localStorage.getItem(`user_profile_${uid}`) || '{}');
-
-      const profile: UserProfile = { 
-        uid, 
-        ...baseProfile,
-        ...storedProfile, // Overwrite with stored edits
-        badges: storedProfile.badges || [], // Ensure badges array exists
-      };
-      
-      if (profile.role === 'Recycler') {
-        const isApproved = localStorage.getItem(`recycler_${uid}_approved`) === 'true';
-        profile.approved = isApproved;
-      }
-      setUserProfile(profile);
-    }
-  };
-
+  // Listen for Firebase Auth state changes
   useEffect(() => {
-    setLoading(true);
-    loadProfile();
-    setLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setFirebaseUser(user);
+      if (user) {
+        setLoading(true);
+        // Check if user profile exists in Firestore
+        const userDocRef = doc(db, USERS_COLLECTION, user.uid);
+        const userDocSnap = await getDoc(userDocRef);
 
-    window.addEventListener('profile-updated', loadProfile);
-    return () => window.removeEventListener('profile-updated', loadProfile);
+        if (userDocSnap.exists()) {
+          // Existing user
+          const profileData = userDocSnap.data() as UserProfile;
+          setUserProfile(profileData);
+        } else {
+          // New user - set initial profile data
+          const initialProfile: UserProfile = {
+            uid: user.uid,
+            name: user.displayName || 'New User',
+            email: user.email || '',
+            photoURL: user.photoURL || '',
+            role: 'Citizen', // Default role, will be updated in WelcomeScreen
+            credits: 0, // Default credits
+            badges: [], // Default empty badges array
+            approved: false, // Default approved status for Recyclers/Contractors
+          };
+          await setDoc(userDocRef, initialProfile);
+          setUserProfile(initialProfile);
+        }
+        setLoading(false);
+      } else {
+        // User logged out
+        setUserProfile(null);
+        setLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
+
   useEffect(() => {
-    const isPublicPage = pathname === '/';
     const dashboardPaths: Record<UserRole, string> = {
-      Citizen: '/citizen',
+      Citizen: '/citizen', // Assuming '/citizen' is the Citizen dashboard path
       Recycler: '/recycler',
       Admin: '/admin',
       Contractor: '/contractor',
@@ -100,61 +80,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (userProfile) {
       const expectedPath = dashboardPaths[userProfile.role];
-      if (pathname !== expectedPath) {
+      // Only redirect if the user is not already on their designated dashboard or on the welcome screen
+      if (pathname !== expectedPath && pathname !== '/welcome') {
         router.push(expectedPath);
       }
-    } else if (!isPublicPage) {
+    } else if (firebaseUser && !userProfile && pathname !== '/welcome') {
+      // Firebase user exists but no profile yet (new user)
+      router.push('/welcome');
+    }
+    else if (!firebaseUser && !isPublicPage) {
+        // No Firebase user and not on a public page, redirect to home (login screen)
       router.push('/');
     }
-  }, [userProfile, pathname, router]);
 
-  const setUserRole = (role: UserRole) => {
-    const baseProfile = mockUsers[role];
-    const uid = roleToUidMap[role];
+  }, [userProfile, firebaseUser, pathname, router, loading]);
 
-    if (baseProfile) {
-        localStorage.setItem('userRole', role);
-        const fullProfile = { uid, ...baseProfile, badges: [] };
+  const signInWithGoogle = async () => {
+    setLoading(true);
+    try {
+      await signInWithPopup(auth, googleProvider);
+      // onAuthStateChanged listener will handle setting userProfile and redirection
+    } catch (error) {
+      console.error("Error signing in with Google:", error);
+      setLoading(false);
+    }
+  };
 
-        if(role === 'Recycler') {
-            const storedApproval = localStorage.getItem(`recycler_${uid}_approved`);
-            fullProfile.approved = storedApproval === 'true';
-        }
-        
-        // Also clear any previous profile edits for that role
-        localStorage.removeItem(`user_profile_${uid}`);
-
-        setUserProfile(fullProfile as UserProfile);
-    } else {
-        console.error("Invalid role selected");
+  const signOut = async () => {
+    setLoading(true);
+    try {
+      await firebaseSignOut(auth);
+      // onAuthStateChanged listener will handle setting userProfile to null and redirection
+    } catch (error) {
+      console.error("Error signing out:", error);
+      setLoading(false);
     }
   };
   
-  const signOut = () => {
-    localStorage.removeItem('userRole');
-    // We don't remove the profile edits, so they persist on next login
-    setUserProfile(null);
-    router.push('/');
-  };
-
-  const updateUserProfile = (updates: Partial<Pick<UserProfile, 'name' | 'photoURL'>>) => {
+  // This function is part of AuthContextType but was not defined.
+  // It was intended for profile updates, which should happen directly
+  // or via a dedicated profile editor component.
+  // Placeholder implementation, will be removed if not used elsewhere.
+  const updateUserProfile = async (updates: Partial<UserProfile>) => {
     if (!userProfile) return;
-    
-    const updatedProfile = { ...userProfile, ...updates };
-    
-    // Update local state
-    setUserProfile(updatedProfile);
-
-    // Persist changes to localStorage
-    const storedProfile = JSON.parse(localStorage.getItem(`user_profile_${userProfile.uid}`) || '{}');
-    const newStoredProfile = { ...storedProfile, ...updates };
-    localStorage.setItem(`user_profile_${userProfile.uid}`, JSON.stringify(newStoredProfile));
-
-    // Dispatch event for other components if needed, though state update should cover it
-    window.dispatchEvent(new CustomEvent('profile-updated'));
+    const userDocRef = doc(db, USERS_COLLECTION, userProfile.uid);
+    await setDoc(userDocRef, updates, { merge: true });
+    setUserProfile({...userProfile, ...updates}); // Update local state
   };
 
-  const value = { userProfile, loading, signOut, setUserRole, updateUserProfile };
+
+
+  const value = { userProfile, loading, signOut, updateUserProfile, signInWithGoogle };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
