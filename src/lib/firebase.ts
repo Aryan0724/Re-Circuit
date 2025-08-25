@@ -2,6 +2,7 @@
 import { initializeApp, getApp, getApps, type FirebaseOptions } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
+import 'dotenv/config';
 
 // Your web app's Firebase configuration
 const firebaseConfig: FirebaseOptions = {
@@ -15,11 +16,10 @@ const firebaseConfig: FirebaseOptions = {
 
 // Validate the configuration
 const requiredKeys: (keyof FirebaseOptions)[] = ['apiKey', 'authDomain', 'projectId'];
-const missingKeys = requiredKeys.filter(key => !firebaseConfig[key]);
-
-if (missingKeys.length > 0) {
-  console.error(`Firebase config is missing the following keys: ${missingKeys.join(', ')}`);
-  // You might want to throw an error here or handle it gracefully
+for (const key of requiredKeys) {
+    if (!firebaseConfig[key]) {
+        throw new Error(`Firebase config is missing key: ${key}. Check your .env file.`);
+    }
 }
 
 
