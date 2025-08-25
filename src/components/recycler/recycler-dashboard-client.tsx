@@ -31,7 +31,7 @@ export function RecyclerDashboardClient({ initialPendingPickups, initialAccepted
   const { toast } = useToast();
 
   const handleGetDirections = (location: PickupLocation) => {
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${location.lat},${location.lon}`;
+    const url = `https://www.google.com/maps/search/?api=1&query=${location.lat},${location.lon}`;
     window.open(url, '_blank');
   };
 
