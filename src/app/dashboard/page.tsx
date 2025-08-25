@@ -9,6 +9,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { PickupRequestForm } from '@/components/citizen/pickup-request-form';
 import { UserPickupsList } from '@/components/citizen/user-pickups-list';
 import { useEffect, useState } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ImpactDashboard } from '@/components/citizen/impact-dashboard';
 
 function StatCard({ icon, title, value, color }: { icon: React.ReactNode; title: string; value: string | number; color: string }) {
   return (
@@ -72,14 +74,25 @@ export default function CitizenDashboardPage() {
         <StatCard icon={<Award className="h-5 w-5" />} title="Eco-Badge" value="Seedling" color="text-green-500" />
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-5">
-        <div className="lg:col-span-2">
-          <PickupRequestForm />
-        </div>
-        <div className="lg:col-span-3">
-          <UserPickupsList />
-        </div>
-      </div>
+      <Tabs defaultValue="pickups" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 md:w-[400px]">
+            <TabsTrigger value="pickups">My Pickups</TabsTrigger>
+            <TabsTrigger value="impact">My Impact</TabsTrigger>
+        </TabsList>
+        <TabsContent value="pickups" className="mt-6">
+             <div className="grid gap-8 lg:grid-cols-5">
+                <div className="lg:col-span-2">
+                <PickupRequestForm />
+                </div>
+                <div className="lg:col-span-3">
+                <UserPickupsList />
+                </div>
+            </div>
+        </TabsContent>
+        <TabsContent value="impact" className="mt-6">
+            <ImpactDashboard />
+        </TabsContent>
+      </Tabs>
 
     </DashboardLayout>
   );
