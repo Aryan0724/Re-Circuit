@@ -1,16 +1,16 @@
+
 'use client';
 
-import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { LayoutDashboard, Recycle, Shield, HardHat, LogOut, User, Settings, PackagePlus, ListChecks, Activity, Users, Award } from 'lucide-react';
+import { LayoutDashboard, Recycle, Shield, HardHat, User, Settings, PackagePlus, ListChecks, Activity, Users, Award } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { cn } from '@/lib/utils';
-import type { UserRole } from '@/types';
+import type { UserProfile, UserRole } from '@/types';
 import { ProfileEditor } from '@/components/profile/profile-editor';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 const navItemsByRole: Record<UserRole, { href: string; label: string; icon: React.ElementType }[]> = {
   Citizen: [
@@ -41,25 +41,47 @@ const dashboardRoutes: Record<UserRole, string> = {
     Contractor: '/contractor'
 }
 
-export function AppSidebar() {
-  const { userProfile, signOut, loading } = useAuth();
-  const pathname = usePathname();
-  const [isProfileEditorOpen, setIsProfileEditorOpen] = useState(false);
+// Mock user profile since auth is removed. Default to Citizen.
+const mockUser: UserProfile = {
+    uid: 'citizen-001',
+    role: 'Citizen',
+    name: 'Eco Citizen',
+    email: 'citizen@example.com',
+    photoURL: 'https://placehold.co/100x100.png',
+    credits: 420,
+    badges: ['first-contribution', 'laptop-recycler']
+};
 
-  if (loading || !userProfile) {
-    return (
-        <aside className="fixed left-0 top-0 z-10 h-screen w-16 md:w-64 border-r bg-card/50 backdrop-blur-lg flex flex-col items-center py-4 gap-4">
-             <div className="w-10 h-10 md:w-12 md:h-12 bg-muted rounded-full animate-pulse"></div>
-             <div className="w-8 h-8 bg-muted rounded-md animate-pulse mt-8"></div>
-             <div className="w-8 h-8 bg-muted rounded-md animate-pulse"></div>
-             <div className="w-8 h-8 bg-muted rounded-md animate-pulse"></div>
-             <div className="mt-auto w-8 h-8 bg-muted rounded-md animate-pulse"></div>
-        </aside>
-    );
+
+export function AppSidebar() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const [isProfileEditorOpen, setIsProfileEditorOpen] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile>(mockUser);
+
+  // Determine current role from URL
+  const currentRole: UserRole = (() => {
+    if (pathname.startsWith('/admin')) return 'Admin';
+    if (pathname.startsWith('/recycler')) return 'Recycler';
+    if (pathname.startsWith('/contractor')) return 'Contractor';
+    return 'Citizen';
+  })();
+
+  // Update mock user's role based on current path
+  if (userProfile.role !== currentRole) {
+      const newUser = {...mockUser, role: currentRole, name: `${currentRole} User` };
+      if (currentRole === 'Recycler') {
+          (newUser as any).approved = true;
+      }
+      setUserProfile(newUser);
   }
 
   const navItems = navItemsByRole[userProfile.role];
   const RoleIcon = roleIcons[userProfile.role];
+
+  const handleRoleChange = (role: UserRole) => {
+    router.push(`/${role.toLowerCase()}`);
+  }
 
   return (
     <TooltipProvider>
@@ -106,30 +128,22 @@ export function AppSidebar() {
                 {userProfile.role}
               </span>
             </div>
-             <ProfileEditor open={isProfileEditorOpen} onOpenChange={setIsProfileEditorOpen}>
-                <Tooltip delayDuration={0}>
-                    <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 hidden md:inline-flex" onClick={() => setIsProfileEditorOpen(true)}>
-                           <Settings className="h-4 w-4" />
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">
-                        Edit Profile
-                    </TooltipContent>
-                </Tooltip>
-             </ProfileEditor>
           </div>
-          <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" className="w-12 h-12 md:w-full md:justify-start" onClick={signOut}>
-                <LogOut className="h-5 w-5" />
-                <span className="hidden md:inline ml-4">Sign Out</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="md:hidden">
-              Sign Out
-            </TooltipContent>
-          </Tooltip>
+          
+           <div className="hidden md:block p-2">
+              <label htmlFor="role-switcher" className="text-xs text-muted-foreground">Switch View</label>
+              <select 
+                id="role-switcher"
+                value={userProfile.role} 
+                onChange={(e) => handleRoleChange(e.target.value as UserRole)}
+                className="w-full mt-1 p-2 rounded-md bg-muted text-sm border-border"
+              >
+                <option value="Citizen">Citizen</option>
+                <option value="Recycler">Recycler</option>
+                <option value="Contractor">Contractor</option>
+                <option value="Admin">Admin</option>
+              </select>
+           </div>
         </div>
       </aside>
     </TooltipProvider>

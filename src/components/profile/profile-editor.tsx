@@ -1,18 +1,18 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { UploadCloud, Loader2 } from 'lucide-react';
-import Image from 'next/image';
+import { Loader2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import type { UserProfile } from '@/types';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.'),
@@ -23,10 +23,11 @@ interface ProfileEditorProps {
     children: React.ReactNode;
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    userProfile: UserProfile | null;
+    onUpdate: (updates: Partial<UserProfile>) => void;
 }
 
-export function ProfileEditor({ children, open, onOpenChange }: ProfileEditorProps) {
-  const { userProfile, updateUserProfile } = useAuth();
+export function ProfileEditor({ children, open, onOpenChange, userProfile, onUpdate }: ProfileEditorProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
@@ -68,8 +69,8 @@ export function ProfileEditor({ children, open, onOpenChange }: ProfileEditorPro
         if (preview && preview !== userProfile.photoURL) {
             profileUpdates.photoURL = preview;
         }
-
-        updateUserProfile(profileUpdates);
+        
+        onUpdate(profileUpdates);
         
         toast({ title: 'Success!', description: 'Your profile has been updated.' });
         onOpenChange(false); // Close the dialog on success

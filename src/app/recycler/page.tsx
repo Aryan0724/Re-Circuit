@@ -1,3 +1,4 @@
+
 'use server';
 
 import { DashboardLayout } from '@/components/dashboard-layout';
@@ -10,17 +11,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { RecyclerDashboardClient } from '@/components/recycler/recycler-dashboard-client';
 
 async function getPickups(userId: string) {
-    // NOTE: This is a mock implementation using localStorage.
+    // NOTE: This is a mock implementation.
     // In a real app, you would fetch this data from a database on the server.
-    // The localStorage calls will not work in a Server Component, so we return empty arrays.
-    const pending: PickupRequest[] = []; // JSON.parse(localStorage.getItem('pickups_pending') || '[]');
-    const accepted: PickupRequest[] = []; // JSON.parse(localStorage.getItem(`pickups_accepted_${userId}`) || '[]');
+    // Since auth is removed, we'll return empty arrays for this server component.
+    const pending: PickupRequest[] = [];
+    const accepted: PickupRequest[] = [];
     return { pending, accepted };
 }
 
 
 export default async function RecyclerDashboardPage() {
-  // Mock user for server component. In a real app, you'd get this from the session.
   const userProfile = { uid: 'recycler-001', name: 'Green Recyclers', role: 'Recycler' as const, approved: true };
 
    if (!userProfile.approved) {

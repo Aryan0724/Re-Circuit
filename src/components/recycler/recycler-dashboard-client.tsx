@@ -1,12 +1,12 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/use-auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import type { PickupRequest } from '@/types';
+import type { PickupRequest, UserProfile } from '@/types';
 import { Check, X } from 'lucide-react';
 import Image from 'next/image';
 
@@ -15,17 +15,25 @@ interface RecyclerDashboardClientProps {
     initialAcceptedPickups: PickupRequest[];
 }
 
+const mockRecyclerUser: UserProfile = {
+  uid: 'recycler-001',
+  role: 'Recycler',
+  name: 'Green Recyclers',
+  email: 'recycler@example.com',
+  photoURL: '',
+  approved: true
+}
+
+
 export function RecyclerDashboardClient({ initialPendingPickups, initialAcceptedPickups }: RecyclerDashboardClientProps) {
-  const { userProfile } = useAuth();
   const [pendingPickups, setPendingPickups] = useState<PickupRequest[]>(initialPendingPickups);
   const [acceptedPickups, setAcceptedPickups] = useState<PickupRequest[]>(initialAcceptedPickups);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   const refreshPickups = () => {
-    if (!userProfile?.uid) return;
     const pending = JSON.parse(localStorage.getItem('pickups_pending') || '[]');
-    const accepted = JSON.parse(localStorage.getItem(`pickups_accepted_${userProfile.uid}`) || '[]');
+    const accepted = JSON.parse(localStorage.getItem(`pickups_accepted_${mockRecyclerUser.uid}`) || '[]');
     setPendingPickups(pending);
     setAcceptedPickups(accepted);
   }
@@ -39,7 +47,7 @@ export function RecyclerDashboardClient({ initialPendingPickups, initialAccepted
 
     window.addEventListener('pickups-updated', refreshPickups);
     return () => window.removeEventListener('pickups-updated', refreshPickups);
-  }, [userProfile?.uid]);
+  }, []);
   
   const handleUpdateStatus = (pickup: PickupRequest, status: 'accepted' | 'rejected' | 'completed') => {
       // Remove from pending
@@ -47,15 +55,15 @@ export function RecyclerDashboardClient({ initialPendingPickups, initialAccepted
       const newPending = currentPending.filter((p: PickupRequest) => p.id !== pickup.id);
       localStorage.setItem('pickups_pending', JSON.stringify(newPending));
 
-      if (status === 'accepted' && userProfile) {
-        const acceptedKey = `pickups_accepted_${userProfile.uid}`;
+      if (status === 'accepted') {
+        const acceptedKey = `pickups_accepted_${mockRecyclerUser.uid}`;
         const currentAccepted = JSON.parse(localStorage.getItem(acceptedKey) || '[]');
-        const updatedPickup = { ...pickup, status: 'accepted' as const, recyclerId: userProfile.uid };
+        const updatedPickup = { ...pickup, status: 'accepted' as const, recyclerId: mockRecyclerUser.uid };
         localStorage.setItem(acceptedKey, JSON.stringify([updatedPickup, ...currentAccepted]));
       }
        
-      if (status === 'completed' && userProfile) {
-        const acceptedKey = `pickups_accepted_${userProfile.uid}`;
+      if (status === 'completed') {
+        const acceptedKey = `pickups_accepted_${mockRecyclerUser.uid}`;
         const currentAccepted = JSON.parse(localStorage.getItem(acceptedKey) || '[]');
         const newAccepted = currentAccepted.filter((p: PickupRequest) => p.id !== pickup.id);
         localStorage.setItem(acceptedKey, JSON.stringify(newAccepted));

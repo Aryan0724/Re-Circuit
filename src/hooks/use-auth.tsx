@@ -1,148 +1,146 @@
 'use client';
 
-import React, { useState, useEffect, createContext, useContext, type ReactNode } from 'react';
-import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut as firebaseSignOut, type User } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { useRouter, usePathname } from 'next/navigation';
-import type { UserProfile, UserRole } from '@/types';
-import { auth, db } from '@/lib/firebase';
+import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import type { UserProfile } from '@/types';
 
-const googleProvider = new GoogleAuthProvider();
+const formSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters.'),
+  photo: z.any().optional(),
+});
 
-const USERS_COLLECTION = 'users';
-
-interface AuthContextType {
-  userProfile: UserProfile | null;
-  loading: boolean;
-  user: User | null;
-  signOut: () => Promise<void>;
-  setUserRole: (role: UserRole) => Promise<void>;
-  updateUserProfile: (updates: Partial<UserProfile>) => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
+interface ProfileEditorProps {
+    children: React.ReactNode;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    userProfile: UserProfile | null;
+    onUpdate: (updates: Partial<UserProfile>) => void;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export function ProfileEditor({ children, open, onOpenChange, userProfile, onUpdate }: ProfileEditorProps) {
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [preview, setPreview] = useState<string | null>(null);
 
-const publicPages = ['/']; // Pages accessible to unauthenticated users
-
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const router = useRouter();
-  const pathname = usePathname();
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setLoading(true);
-      if (currentUser) {
-        setUser(currentUser);
-        const userDocRef = doc(db, USERS_COLLECTION, currentUser.uid);
-        const userDocSnap = await getDoc(userDocRef);
-
-        if (userDocSnap.exists()) {
-          const profile = userDocSnap.data() as UserProfile;
-          setUserProfile(profile);
-        } else {
-          setUserProfile(null);
-        }
-      } else {
-        setUser(null);
-        setUserProfile(null);
-      }
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: '',
+    },
+  });
 
   useEffect(() => {
-    if (loading) return;
-
-    const isPublicPage = publicPages.includes(pathname);
-
-    if (userProfile) {
-      // User is logged in and has a profile, redirect to their dashboard
-      const dashboardPath = `/${userProfile.role.toLowerCase()}`;
-      if (pathname !== dashboardPath) {
-        router.push(dashboardPath);
-      }
-    } else if (!user && !isPublicPage) {
-      // No user, and not on a public page, redirect to home to log in
-      router.push('/');
+    if (userProfile && open) {
+      form.reset({ name: userProfile.name });
+      setPreview(userProfile.photoURL);
     }
-    // If user is logged in but no profile, they stay on the root page (which shows WelcomeScreen).
-    // If no user is logged in, they stay on the root page (which shows LoginScreen).
+  }, [userProfile, open, form]);
 
-  }, [user, userProfile, loading, pathname, router]);
-
-  const signInWithGoogle = async () => {
-    setLoading(true);
-    try {
-      await signInWithPopup(auth, googleProvider);
-      // onAuthStateChanged will handle the rest
-    } catch (error) {
-      console.error("Error signing in with Google:", error);
-      setLoading(false);
-    }
-  };
-
-  const signOut = async () => {
-    await firebaseSignOut(auth);
-    router.push('/');
-  };
-
-  const setUserRole = async (role: UserRole) => {
-    if (!user) throw new Error("User not authenticated.");
-
-    const baseProfile = {
-        uid: user.uid,
-        name: user.displayName || 'New User',
-        email: user.email || '',
-        photoURL: user.photoURL || `https://avatar.vercel.sh/${user.uid}.png`,
-        role: role,
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreview(reader.result as string);
       };
-
-      let newUserProfile: UserProfile;
-
-      switch (role) {
-        case 'Citizen':
-          newUserProfile = { ...baseProfile, role: 'Citizen', credits: 0, badges: [] };
-          break;
-        case 'Recycler':
-          newUserProfile = { ...baseProfile, role: 'Recycler', approved: false };
-          break;
-        case 'Contractor':
-          newUserProfile = { ...baseProfile, role: 'Contractor' };
-          break;
-        case 'Admin':
-           newUserProfile = { ...baseProfile, role: 'Admin' };
-           break;
-        default:
-          throw new Error(`Invalid role selected: ${role}`);
-      }
-
-    const userDocRef = doc(db, USERS_COLLECTION, user.uid);
-    await setDoc(userDocRef, newUserProfile);
-    setUserProfile(newUserProfile);
+      reader.readAsDataURL(file);
+    }
   };
   
-  const updateUserProfile = async (updates: Partial<UserProfile>) => {
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!userProfile) return;
-    const userDocRef = doc(db, USERS_COLLECTION, userProfile.uid);
-    await setDoc(userDocRef, updates, { merge: true });
-    setUserProfile((prev) => prev ? { ...prev, ...updates } : null);
+    setIsSubmitting(true);
+    
+    try {
+        const profileUpdates: Partial<Pick<UserProfile, 'name' | 'photoURL'>> = {
+            name: values.name,
+        };
+
+        if (preview && preview !== userProfile.photoURL) {
+            profileUpdates.photoURL = preview;
+        }
+        
+        onUpdate(profileUpdates);
+        
+        toast({ title: 'Success!', description: 'Your profile has been updated.' });
+        onOpenChange(false); // Close the dialog on success
+    } catch (error) {
+      console.error(error);
+      toast({
+        variant: 'destructive',
+        title: 'Update Failed',
+        description: 'There was an error updating your profile.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const value = { user, userProfile, loading, signInWithGoogle, signOut, setUserRole, updateUserProfile };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogTrigger asChild>{children}</DialogTrigger>
+        <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+                <DialogTitle>Edit Profile</DialogTitle>
+                <DialogDescription>
+                    Make changes to your profile here. Click save when you're done.
+                </DialogDescription>
+            </DialogHeader>
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 py-4">
+                    <FormField
+                    control={form.control}
+                    name="photo"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-col items-center">
+                            <FormLabel>Profile Picture</FormLabel>
+                             <FormControl>
+                                <label htmlFor="profile-pic-upload" className="cursor-pointer">
+                                    <Avatar className="h-24 w-24 ring-2 ring-primary ring-offset-2 ring-offset-background">
+                                        <AvatarImage src={preview || ''} alt={userProfile?.name} />
+                                        <AvatarFallback>{userProfile?.name.charAt(0)}</AvatarFallback>
+                                    </Avatar>
+                                    <Input id="profile-pic-upload" type="file" className="hidden" accept="image/*" onChange={e => { field.onChange(e.target.files); handleFileChange(e); }} />
+                                </label>
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Display Name</FormLabel>
+                        <FormControl>
+                            <Input placeholder="Your Name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button type="button" variant="secondary">Cancel</Button>
+                        </DialogClose>
+                        <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Save changes
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </Form>
+        </DialogContent>
+    </Dialog>
+  );
 }
-
-export const useAuth = (): AuthContextType => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};

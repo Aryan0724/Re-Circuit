@@ -1,148 +1,146 @@
+'use client';
 
-import * as functions from 'firebase-functions';
-import * as admin from 'firebase-admin';
+import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import type { UserProfile } from '@/types';
 
-// Initialize Firebase Admin SDK if not already initialized
-if (!admin.apps.length) {
-  admin.initializeApp();
+const formSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters.'),
+  photo: z.any().optional(),
+});
+
+interface ProfileEditorProps {
+    children: React.ReactNode;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    userProfile: UserProfile | null;
+    onUpdate: (updates: Partial<UserProfile>) => void;
 }
-const db = admin.firestore();
 
-/**
- * Interface for the data structure of a pickup request.
- */
-interface PickupRequest {
-  status: 'pending' | 'completed' | 'cancelled';
-  userId: string;
-  category: string;
-  impact: {
-    co2: number;
-    materials: number;
-    landfill: number;
+export function ProfileEditor({ children, open, onOpenChange, userProfile, onUpdate }: ProfileEditorProps) {
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [preview, setPreview] = useState<string | null>(null);
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: '',
+    },
+  });
+
+  useEffect(() => {
+    if (userProfile && open) {
+      form.reset({ name: userProfile.name });
+      setPreview(userProfile.photoURL);
+    }
+  }, [userProfile, open, form]);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   };
-}
-
-/**
- * Interface for the user profile data structure.
- */
-interface UserProfile {
-  uid: string;
-  badges: string[];
-}
-
-/**
- * Aggregated statistics for a single user's contributions.
- */
-interface UserContributionStats {
-  completedPickupCount: number;
-  totalCo2Reduced: number;
-  totalMaterialsRecovered: number;
-  totalWasteDiverted: number;
-  categoryCounts: Record<string, number>;
-}
-
-/**
- * Defines the criteria and metadata for each badge.
- */
-const BADGE_CRITERIA: Record<string, (stats: UserContributionStats, existingBadges: string[]) => boolean> = {
-  'first-contribution': (stats) => stats.completedPickupCount >= 1,
-  'laptop-recycler': (stats) => stats.categoryCounts['Laptop'] >= 1,
-  'mobile-master': (stats) => stats.categoryCounts['Mobile'] >= 5,
-  'landfill-hero-10kg': (stats) => stats.totalWasteDiverted >= 10,
-};
-type BadgeId = keyof typeof BADGE_CRITERIA;
-
-
-/**
- * Cloud Function that triggers when a pickup document is updated.
- * It handles aggregating community-wide statistics and awarding badges to users
- * when a pickup's status changes to 'completed'.
- */
-export const onPickupCompleted = functions.firestore
-  .document('pickups/{pickupId}')
-  .onUpdate(async (change) => {
-    const before = change.before.data() as PickupRequest;
-    const after = change.after.data() as PickupRequest;
-
-    // Exit if status didn't change to 'completed'
-    if (before.status === 'completed' || after.status !== 'completed') {
-      return null;
-    }
-
-    const { userId, impact } = after;
-    if (!userId || !impact) {
-      functions.logger.error('Missing userId or impact data on pickup.', { id: change.after.id });
-      return null;
-    }
-
-    // --- 1. Aggregate Community Statistics ---
-    const communityStatsRef = db.doc('stats/communityImpact');
-    const increment = admin.firestore.FieldValue.increment;
+  
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (!userProfile) return;
+    setIsSubmitting(true);
+    
     try {
-      await communityStatsRef.set({
-        totalCo2Reduced: increment(impact.co2),
-        totalMaterialsRecovered: increment(impact.materials),
-        totalWasteDiverted: increment(impact.landfill),
-      }, { merge: true });
-      functions.logger.log('Community stats updated successfully.');
-    } catch (error) {
-      functions.logger.error('Error updating community stats:', error);
-    }
-
-    // --- 2. Award Badges ---
-    const userRef = db.doc(`users/${userId}`);
-    const userPickupsQuery = db.collection('pickups')
-      .where('userId', '==', userId)
-      .where('status', '==', 'completed');
-
-    try {
-      await db.runTransaction(async (transaction) => {
-        const userDoc = await transaction.get(userRef);
-        if (!userDoc.exists) {
-          throw new Error(`User document ${userId} not found.`);
-        }
-        const existingBadges = (userDoc.data() as UserProfile).badges || [];
-        const newBadges: BadgeId[] = [];
-
-        // Calculate user's total contributions
-        const pickupsSnapshot = await transaction.get(userPickupsQuery);
-        const userStats: UserContributionStats = {
-          completedPickupCount: 0,
-          totalCo2Reduced: 0,
-          totalMaterialsRecovered: 0,
-          totalWasteDiverted: 0,
-          categoryCounts: {},
+        const profileUpdates: Partial<Pick<UserProfile, 'name' | 'photoURL'>> = {
+            name: values.name,
         };
 
-        pickupsSnapshot.docs.forEach(doc => {
-          const pickup = doc.data() as PickupRequest;
-          userStats.completedPickupCount += 1;
-          userStats.totalCo2Reduced += pickup.impact?.co2 || 0;
-          userStats.totalMaterialsRecovered += pickup.impact?.materials || 0;
-          userStats.totalWasteDiverted += pickup.impact?.landfill || 0;
-          userStats.categoryCounts[pickup.category] = (userStats.categoryCounts[pickup.category] || 0) + 1;
-        });
-
-        // Check for new badges
-        for (const badgeId of Object.keys(BADGE_CRITERIA) as BadgeId[]) {
-          if (!existingBadges.includes(badgeId)) {
-            if (BADGE_CRITERIA[badgeId](userStats, existingBadges)) {
-              newBadges.push(badgeId);
-            }
-          }
+        if (preview && preview !== userProfile.photoURL) {
+            profileUpdates.photoURL = preview;
         }
-
-        // Update user document if new badges were earned
-        if (newBadges.length > 0) {
-          functions.logger.log(`Awarding new badges to user ${userId}:`, newBadges);
-          transaction.update(userRef, {
-            badges: admin.firestore.FieldValue.arrayUnion(...newBadges)
-          });
-        }
-      });
+        
+        onUpdate(profileUpdates);
+        
+        toast({ title: 'Success!', description: 'Your profile has been updated.' });
+        onOpenChange(false); // Close the dialog on success
     } catch (error) {
-      functions.logger.error(`Error in badge awarding transaction for user ${userId}:`, error);
+      console.error(error);
+      toast({
+        variant: 'destructive',
+        title: 'Update Failed',
+        description: 'There was an error updating your profile.',
+      });
+    } finally {
+      setIsSubmitting(false);
     }
+  };
 
-    return null;
-  });
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogTrigger asChild>{children}</DialogTrigger>
+        <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+                <DialogTitle>Edit Profile</DialogTitle>
+                <DialogDescription>
+                    Make changes to your profile here. Click save when you're done.
+                </DialogDescription>
+            </DialogHeader>
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 py-4">
+                    <FormField
+                    control={form.control}
+                    name="photo"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-col items-center">
+                            <FormLabel>Profile Picture</FormLabel>
+                             <FormControl>
+                                <label htmlFor="profile-pic-upload" className="cursor-pointer">
+                                    <Avatar className="h-24 w-24 ring-2 ring-primary ring-offset-2 ring-offset-background">
+                                        <AvatarImage src={preview || ''} alt={userProfile?.name} />
+                                        <AvatarFallback>{userProfile?.name.charAt(0)}</AvatarFallback>
+                                    </Avatar>
+                                    <Input id="profile-pic-upload" type="file" className="hidden" accept="image/*" onChange={e => { field.onChange(e.target.files); handleFileChange(e); }} />
+                                </label>
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Display Name</FormLabel>
+                        <FormControl>
+                            <Input placeholder="Your Name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button type="button" variant="secondary">Cancel</Button>
+                        </DialogClose>
+                        <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Save changes
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </Form>
+        </DialogContent>
+    </Dialog>
+  );
+}

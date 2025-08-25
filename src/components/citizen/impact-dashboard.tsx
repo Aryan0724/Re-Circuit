@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -5,13 +6,23 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/use-auth';
-import type { PickupRequest } from '@/types';
+import type { PickupRequest, UserProfile } from '@/types';
 import { Leaf, Recycle, Trash2, BrainCircuit, Loader2, Sparkles } from 'lucide-react';
 import { generateImpactReport } from '@/ai/flows/generate-impact-report';
 import { Share } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { Badges } from './impact-badges';
+
+// Mock user since auth is removed
+const mockUser: UserProfile = {
+    uid: 'citizen-001',
+    role: 'Citizen',
+    name: 'Eco Citizen',
+    email: 'citizen@example.com',
+    photoURL: 'https://placehold.co/100x100.png',
+    badges: ['first-contribution', 'laptop-recycler']
+};
+
 
 // Define impact values per item category
 const IMPACT_VALUES = {
@@ -51,7 +62,6 @@ function ImpactCard({ icon, title, value, unit }: { icon: React.ReactNode; title
 }
 
 export function ImpactDashboard() {
-  const { userProfile } = useAuth();
   const { toast } = useToast();
   const [metrics, setMetrics] = useState<ImpactMetrics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -60,10 +70,8 @@ export function ImpactDashboard() {
   const [communityMetrics, setCommunityMetrics] = useState<CommunityMetrics | null>(null);
 
   useEffect(() => {
-    if (!userProfile?.uid) return;
-
     setLoading(true);
-    const storedPickups = localStorage.getItem(`pickups_${userProfile.uid}`);
+    const storedPickups = localStorage.getItem(`pickups_${mockUser.uid}`);
     if (storedPickups) {
       const allPickups: PickupRequest[] = JSON.parse(storedPickups);
       const completedPickups = allPickups.filter(p => p.status === 'completed');
@@ -92,10 +100,10 @@ export function ImpactDashboard() {
     fetchCommunityImpact();
 
     setLoading(false);
-  }, [userProfile?.uid]);
+  }, []);
 
   const handleGenerateReport = async () => {
-    if (!metrics || !userProfile) return;
+    if (!metrics) return;
     
     setIsGenerating(true);
     setReport(null);
@@ -111,8 +119,8 @@ export function ImpactDashboard() {
             return;
         }
 
-        const latestBadge = userProfile.badges && userProfile.badges.length > 0
-            ? userProfile.badges[userProfile.badges.length - 1]
+        const latestBadge = mockUser.badges && mockUser.badges.length > 0
+            ? mockUser.badges[mockUser.badges.length - 1]
             : 'Eco-Explorer';
         
         const communityCo2 = communityMetrics?.totalCo2Reduced || 0;
@@ -173,13 +181,13 @@ export function ImpactDashboard() {
     return <p>No impact data available.</p>;
   }
   
-  const latestBadgeName = userProfile?.badges && userProfile.badges.length > 0 ? userProfile.badges[userProfile.badges.length - 1] : "Eco-Explorer";
+  const latestBadgeName = mockUser?.badges && mockUser.badges.length > 0 ? mockUser.badges[mockUser.badges.length - 1] : "Eco-Explorer";
 
   return (
     <div className="space-y-8">
        {/* Shareable Card - rendered but hidden */}
         <div id="impact-share-card" className="p-8 bg-gradient-to-br from-green-100 via-blue-100 to-primary/20 rounded-lg shadow-lg text-center space-y-4 fixed -left-[9999px] top-0 w-[400px]">
-            <h3 className="text-2xl font-bold text-primary">{userProfile?.name || 'Re-Circuit User'}</h3>
+            <h3 className="text-2xl font-bold text-primary">{mockUser?.name || 'Re-Circuit User'}</h3>
             <p className="text-lg text-foreground/80">My Impact Highlights:</p>
             <div className="flex justify-around text-base font-semibold text-foreground/90">
                 <span>🍃 {metrics.co2.toFixed(1)} kg CO₂</span>
@@ -272,7 +280,7 @@ export function ImpactDashboard() {
        </div>
 
 
-      <Badges earnedBadges={userProfile?.badges || []} />
+      <Badges earnedBadges={mockUser?.badges || []} />
 
     </div>
   );

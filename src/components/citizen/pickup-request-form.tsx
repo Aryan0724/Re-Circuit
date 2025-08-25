@@ -1,10 +1,10 @@
+
 'use client';
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -15,7 +15,16 @@ import { useToast } from '@/hooks/use-toast';
 import { generatePickupDescription } from '@/ai/flows/generate-pickup-description';
 import { UploadCloud, Loader2, MapPin } from 'lucide-react';
 import Image from 'next/image';
-import type { PickupRequest } from '@/types';
+import type { PickupRequest, UserProfile } from '@/types';
+
+// Mock user since auth is removed
+const mockUser: UserProfile = {
+    uid: 'citizen-001',
+    role: 'Citizen',
+    name: 'Eco Citizen',
+    email: 'citizen@example.com',
+    photoURL: 'https://placehold.co/100x100.png',
+};
 
 const formSchema = z.object({
   category: z.string().min(1, 'Category is required'),
@@ -25,7 +34,6 @@ const formSchema = z.object({
 });
 
 export function PickupRequestForm() {
-  const { userProfile } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -95,7 +103,7 @@ export function PickupRequestForm() {
   };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    if (!userProfile || !preview) return;
+    if (!preview) return;
     setIsSubmitting(true);
     
     // Simulate network delay
@@ -104,8 +112,8 @@ export function PickupRequestForm() {
     try {
         const newPickup: PickupRequest = {
             id: `pickup_${Date.now()}`,
-            citizenId: userProfile.uid,
-            citizenName: userProfile.name,
+            citizenId: mockUser.uid,
+            citizenName: mockUser.name,
             category: values.category,
             description: values.description,
             location: { displayAddress: values.address, lat: 0, lon: 0 },
@@ -115,7 +123,7 @@ export function PickupRequestForm() {
         };
 
         // Store in citizen's pickups
-        const citizenPickupsKey = `pickups_${userProfile.uid}`;
+        const citizenPickupsKey = `pickups_${mockUser.uid}`;
         const existingCitizenPickups = JSON.parse(localStorage.getItem(citizenPickupsKey) || '[]');
         localStorage.setItem(citizenPickupsKey, JSON.stringify([newPickup, ...existingCitizenPickups]));
         
