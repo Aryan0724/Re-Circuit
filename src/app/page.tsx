@@ -2,10 +2,10 @@
 
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { motion } from 'framer-motion';
-import { ChevronRight, Moon, Sun } from 'lucide-react';
+import { ChevronRight, Moon, Sun, Recycle } from 'lucide-react';
 import type { UserRole } from '@/types';
+import { useEffect, useState } from 'react';
 
 const roles: { role: UserRole; title: string }[] = [
   { role: 'Citizen', title: 'Citizen' },
@@ -16,9 +16,19 @@ const roles: { role: UserRole; title: string }[] = [
 
 export default function Home() {
   const { loading, setUserRole } = useAuth();
-  // A simple theme toggle for demonstration
+  const [theme, setTheme] = useState('light');
+
+  useEffect(() => {
+    const storedTheme = localStorage.getItem('theme') || 'light';
+    setTheme(storedTheme);
+    document.documentElement.classList.toggle('dark', storedTheme === 'dark');
+  }, []);
+
   const toggleTheme = () => {
-    document.documentElement.classList.toggle('dark');
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+    document.documentElement.classList.toggle('dark', newTheme === 'dark');
   };
 
 
@@ -43,8 +53,9 @@ export default function Home() {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="text-center"
+        className="text-center flex flex-col items-center gap-2"
       >
+        <Recycle className="h-16 w-16 text-primary" />
         <h1 className="text-5xl font-bold text-primary">Re-Circuit</h1>
         <p className="mt-2 text-muted-foreground">Welcome! Please select your role to begin.</p>
       </motion.div>
@@ -62,7 +73,6 @@ export default function Home() {
             size="lg"
             className="w-full justify-between text-base py-6 bg-card hover:bg-accent/50"
             onClick={() => setUserRole(role)}
-            disabled={loading}
           >
             {title}
             <ChevronRight className="h-5 w-5" />

@@ -39,12 +39,10 @@ const mockUsers: Record<UserRole, UserProfile> = {
 };
 
 interface AuthContextType {
-  user: UserProfile | null;
   userProfile: UserProfile | null;
   loading: boolean;
-  signOut: () => Promise<void>;
-  setUserRole: (role: UserRole) => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
+  signOut: () => void;
+  setUserRole: (role: UserRole) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -57,17 +55,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Check for a "logged in" user in localStorage
-    const storedRole = localStorage.getItem('userRole') as UserRole | null;
-    if (storedRole && mockUsers[storedRole]) {
-      const profile = mockUsers[storedRole];
-      setUserProfile(profile);
+    try {
+      const storedRole = localStorage.getItem('userRole') as UserRole | null;
+      if (storedRole && mockUsers[storedRole]) {
+        setUserProfile(mockUsers[storedRole]);
+      }
+    } catch (error) {
+      console.error("Could not access localStorage:", error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   useEffect(() => {
     if (loading) return;
 
+    const isPublicPage = pathname === '/';
     const dashboardPaths: Record<UserRole, string> = {
       Citizen: '/dashboard',
       Recycler: '/recycler',
@@ -75,44 +78,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       Contractor: '/contractor',
     };
 
-    if (!userProfile) {
-      // If not logged in, stay on the homepage
-      if (pathname !== '/') {
-        router.push('/');
-      }
-    } else {
-      // If logged in, redirect to the correct dashboard
+    if (userProfile) {
       const expectedPath = dashboardPaths[userProfile.role];
       if (pathname !== expectedPath) {
         router.push(expectedPath);
       }
+    } else if (!isPublicPage) {
+      router.push('/');
     }
   }, [userProfile, loading, pathname, router]);
 
-  const signOut = async () => {
-    setLoading(true);
-    localStorage.removeItem('userRole');
-    setUserProfile(null);
-    router.push('/');
-    setLoading(false);
-  };
-
-  const setUserRole = async (role: UserRole) => {
-    setLoading(true);
+  const setUserRole = (role: UserRole) => {
     const profile = mockUsers[role];
     if (profile) {
-      localStorage.setItem('userRole', role);
+      try {
+        localStorage.setItem('userRole', role);
+      } catch (error) {
+         console.error("Could not access localStorage:", error);
+      }
       setUserProfile(profile);
     } else {
       console.error("Invalid role selected");
     }
   };
   
-  const signInWithGoogle = async () => {
-    console.warn("signInWithGoogle is not implemented in fake auth.");
+  const signOut = () => {
+    try {
+      localStorage.removeItem('userRole');
+    } catch (error) {
+       console.error("Could not access localStorage:", error);
+    }
+    setUserProfile(null);
+    router.push('/');
   };
 
-  const value = { user: userProfile, userProfile, loading, signOut, setUserRole, signInWithGoogle };
+  const value = { userProfile, loading, signOut, setUserRole };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
