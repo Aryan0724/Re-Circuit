@@ -1,30 +1,12 @@
+
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
-import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronRight, Moon, Recycle, Sun } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { User } from 'firebase/auth';
 import LoginScreen from '@/components/login-screen';
 import WelcomeScreen from '@/components/welcome-screen';
 
 export default function Home() {
   const { loading, user, userProfile } = useAuth();
-  const [theme, setTheme] = useState('light');
-  
-  useEffect(() => {
-    const storedTheme = localStorage.getItem('theme') || 'light';
-    setTheme(storedTheme);
-    document.documentElement.classList.toggle('dark', storedTheme === 'dark');
-  }, []);
-
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-    document.documentElement.classList.toggle('dark', newTheme === 'dark');
-  };
 
   if (loading) {
     return (
