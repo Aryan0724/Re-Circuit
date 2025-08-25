@@ -13,16 +13,8 @@ import type { PickupRequest } from '@/types';
 import { Check, X } from 'lucide-react';
 import Image from 'next/image';
 import { RoutePlanner } from '@/components/recycler/route-planner';
-
-const mockPendingPickupsData: Omit<PickupRequest, 'createdAt'>[] = [
-  { id: 'p1', citizenId: 'c1', citizenName: 'Alice', category: 'Laptop', description: 'Broken Macbook Pro', location: { displayAddress: '1 Main St', lat: 0, lon: 0 }, photoURL: 'https://placehold.co/128x128.png', status: 'pending' },
-  { id: 'p2', citizenId: 'c2', citizenName: 'Bob', category: 'Appliance', description: 'Old microwave', location: { displayAddress: '2 Oak Ave', lat: 0, lon: 0 }, photoURL: 'https://placehold.co/128x128.png', status: 'pending' },
-];
-
-const mockAcceptedPickupsData: Omit<PickupRequest, 'createdAt'>[] = [
-  { id: 'p3', citizenId: 'c3', citizenName: 'Charlie', recyclerId: 'recycler-001', category: 'Battery', description: 'Used car battery', location: { displayAddress: '3 Pine Ln', lat: 0, lon: 0 }, photoURL: 'https://placehold.co/128x128.png', status: 'accepted' },
-];
-
+import { db } from '@/lib/firebase';
+import { collection, query, where, onSnapshot, or } from 'firebase/firestore';
 
 export default function RecyclerDashboardPage() {
   const { userProfile } = useAuth();
@@ -32,27 +24,32 @@ export default function RecyclerDashboardPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!userProfile) return;
+    if (!userProfile?.uid) return;
+
     setLoading(true);
-    setPendingPickups(mockPendingPickupsData.map(p => ({ ...p, createdAt: new Date() as any })));
-    setAcceptedPickups(mockAcceptedPickupsData.map(p => ({ ...p, createdAt: new Date() as any })));
-    setLoading(false);
-  }, [userProfile]);
+
+    // Listener for pending pickups
+    const pendingQuery = query(collection(db, 'pickups'), where('status', '==', 'pending'));
+    const unsubPending = onSnapshot(pendingQuery, (snapshot) => {
+      const pickupsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PickupRequest[];
+      setPendingPickups(pickupsData);
+      setLoading(false);
+    });
+
+    // Listener for pickups accepted by the current recycler
+    const acceptedQuery = query(collection(db, 'pickups'), where('status', '==', 'accepted'), where('recyclerId', '==', userProfile.uid));
+    const unsubAccepted = onSnapshot(acceptedQuery, (snapshot) => {
+      const pickupsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PickupRequest[];
+      setAcceptedPickups(pickupsData);
+    });
+
+    return () => {
+      unsubPending();
+      unsubAccepted();
+    };
+  }, [userProfile?.uid]);
   
   const handleUpdateStatus = async (pickupId: string, status: 'accepted' | 'rejected' | 'completed') => {
-    // In-memory update for demonstration
-    if (status === 'accepted') {
-      const pickupToAccept = pendingPickups.find(p => p.id === pickupId);
-      if (pickupToAccept) {
-        setPendingPickups(current => current.filter(p => p.id !== pickupId));
-        setAcceptedPickups(current => [{ ...pickupToAccept, status: 'accepted' }, ...current]);
-      }
-    } else if (status === 'rejected') {
-        setPendingPickups(current => current.filter(p => p.id !== pickupId));
-    } else if (status === 'completed') {
-        setAcceptedPickups(current => current.filter(p => p.id !== pickupId));
-    }
-
     const result = await updatePickupStatus(pickupId, status, userProfile?.uid);
     if(result.success) {
       toast({ title: `Request ${status}` });
@@ -127,7 +124,7 @@ export default function RecyclerDashboardPage() {
                                 <p className="font-semibold">{pickup.category}</p>
                                 <p className="text-sm text-muted-foreground">{pickup.location.displayAddress}</p>
                             </div>
-                            <Button size="sm" onClick={() => handleUpdateStatus(pickup.id, 'completed')}><Check className="h-4 w-4 mr-1" />Mark Complete</Button>
+                            <Button size="sm" onClick={() => handleUpdateStatus(pickup.id, 'completed', userProfile?.uid, pickup.citizenId)}><Check className="h-4 w-4 mr-1" />Mark Complete</Button>
                         </div>
                     </div>
                 </div>

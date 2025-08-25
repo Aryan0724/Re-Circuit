@@ -10,6 +10,9 @@ import { Download } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import type { PickupRequest, PickupStatus } from '@/types';
 import { format } from 'date-fns';
+import { db } from '@/lib/firebase';
+import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+
 
 const statusColors: Record<PickupStatus, string> = {
   pending: 'bg-yellow-500',
@@ -18,13 +21,6 @@ const statusColors: Record<PickupStatus, string> = {
   rejected: 'bg-red-500',
 };
 
-const mockAllPickups: Omit<PickupRequest, 'createdAt'>[] = [
-    { id: '1', citizenId: 'c-1', citizenName: 'Alice', category: 'Laptop', description: 'Broken Macbook Pro', location: { displayAddress: '1 Main St, Ecotown', lat: 0, lon: 0 }, photoURL: '', status: 'completed' },
-    { id: '2', citizenId: 'c-2', citizenName: 'Bob', category: 'Appliance', description: 'Old microwave', location: { displayAddress: '2 Oak Ave, Ecotown', lat: 0, lon: 0 }, photoURL: '', status: 'completed' },
-    { id: '3', citizenId: 'c-3', citizenName: 'Charlie', category: 'Battery', description: 'Used car battery', location: { displayAddress: '3 Pine Ln, Greenburg', lat: 0, lon: 0 }, photoURL: '', status: 'accepted' },
-    { id: '4', citizenId: 'c-4', citizenName: 'Diana', category: 'Mobile', description: 'Old Android phone', location: { displayAddress: '4 Birch Rd, Greenburg', lat: 0, lon: 0 }, photoURL: '', status: 'pending' },
-    { id: '5', citizenId: 'c-5', citizenName: 'Ethan', category: 'Other', description: 'Box of old cables', location: { displayAddress: '5 Maple Ct, Ecotown', lat: 0, lon: 0 }, photoURL: '', status: 'rejected' },
-];
 
 export function ContractorTable() {
   const [pickups, setPickups] = useState<PickupRequest[]>([]);
@@ -33,8 +29,18 @@ export function ContractorTable() {
 
   useEffect(() => {
     setLoading(true);
-    setPickups(mockAllPickups.map(p => ({ ...p, createdAt: new Date() as any })));
-    setLoading(false);
+    const q = query(collection(db, 'pickups'), orderBy('createdAt', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const pickupsData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate()
+        })) as PickupRequest[];
+        setPickups(pickupsData);
+        setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const filteredPickups = useMemo(() => {
@@ -55,7 +61,7 @@ export function ContractorTable() {
       p.category,
       p.status,
       `"${p.location.displayAddress.replace(/"/g, '""')}"`,
-      format(new Date(), 'yyyy-MM-dd HH:mm') // Using current date for mock data
+      p.createdAt ? format(new Date(p.createdAt), 'yyyy-MM-dd HH:mm') : 'N/A'
     ].join(','));
 
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows].join('\n');
@@ -130,7 +136,7 @@ export function ContractorTable() {
                     <TableCell>{pickup.category}</TableCell>
                     <TableCell><Badge className={`${statusColors[pickup.status]} hover:${statusColors[pickup.status]} text-white capitalize`}>{pickup.status}</Badge></TableCell>
                     <TableCell className="max-w-xs truncate">{pickup.location.displayAddress}</TableCell>
-                    <TableCell>{format(new Date(), 'MMM d, yyyy')}</TableCell>
+                    <TableCell>{pickup.createdAt ? format(new Date(pickup.createdAt), 'MMM d, yyyy') : 'N/A'}</TableCell>
                   </TableRow>
                 ))
               )}

@@ -3,11 +3,12 @@
 import React, { useState, useEffect, createContext, useContext, type ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import type { UserProfile, UserRole } from '@/types';
+import { db } from '@/lib/firebase';
+import { doc, onSnapshot, setDoc, getDoc } from 'firebase/firestore';
 
 // Define mock users for fake authentication
-const mockUsers: Record<UserRole, UserProfile> = {
+const mockUsers: Record<UserRole, Omit<UserProfile, 'uid'>> = {
   Citizen: {
-    uid: 'citizen-001',
     role: 'Citizen',
     name: 'Eco Citizen',
     email: 'citizen@example.com',
@@ -15,28 +16,33 @@ const mockUsers: Record<UserRole, UserProfile> = {
     credits: 420,
   },
   Recycler: {
-    uid: 'recycler-001',
     role: 'Recycler',
     name: 'Green Recyclers',
     email: 'recycler@example.com',
     photoURL: 'https://placehold.co/100x100.png',
-    approved: true,
+    approved: false, // Default to not approved
   },
   Admin: {
-    uid: 'admin-001',
     role: 'Admin',
     name: 'Platform Admin',
     email: 'admin@example.com',
     photoURL: 'https://placehold.co/100x100.png',
   },
   Contractor: {
-    uid: 'contractor-001',
     role: 'Contractor',
     name: 'Govt Contractor',
     email: 'contractor@example.com',
     photoURL: 'https://placehold.co/100x100.png',
   },
 };
+
+const roleToUidMap: Record<UserRole, string> = {
+    Citizen: 'citizen-001',
+    Recycler: 'recycler-001',
+    Admin: 'admin-001',
+    Contractor: 'contractor-001',
+}
+
 
 interface AuthContextType {
   userProfile: UserProfile | null;
@@ -55,15 +61,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Check for a "logged in" user in localStorage
-    try {
-      const storedRole = localStorage.getItem('userRole') as UserRole | null;
-      if (storedRole && mockUsers[storedRole]) {
-        setUserProfile(mockUsers[storedRole]);
-      }
-    } catch (error) {
-      console.error("Could not access localStorage:", error);
-    } finally {
-      setLoading(false);
+    const storedRole = localStorage.getItem('userRole') as UserRole | null;
+    if (storedRole) {
+        const uid = roleToUidMap[storedRole];
+        const unsub = onSnapshot(doc(db, "users", uid), (doc) => {
+            if (doc.exists()) {
+                setUserProfile(doc.data() as UserProfile);
+            }
+            setLoading(false);
+        });
+        return () => unsub();
+    } else {
+        setLoading(false);
     }
   }, []);
 
@@ -80,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (userProfile) {
       const expectedPath = dashboardPaths[userProfile.role];
-      if (pathname !== expectedPath) {
+      if (pathname !== expectedPath && !pathname.startsWith('/api')) { // Ignore api routes
         router.push(expectedPath);
       }
     } else if (!isPublicPage) {
@@ -88,26 +97,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [userProfile, loading, pathname, router]);
 
-  const setUserRole = (role: UserRole) => {
-    const profile = mockUsers[role];
-    if (profile) {
-      try {
+  const setUserRole = async (role: UserRole) => {
+    setLoading(true);
+    const baseProfile = mockUsers[role];
+    const uid = roleToUidMap[role];
+
+    if (baseProfile) {
+        const userRef = doc(db, 'users', uid);
+        const userSnap = await getDoc(userRef);
+
+        if (!userSnap.exists()) {
+            // Create user document if it doesn't exist
+            const newProfile: UserProfile = { uid, ...baseProfile };
+            await setDoc(userRef, newProfile);
+        }
+        
         localStorage.setItem('userRole', role);
-      } catch (error) {
-         console.error("Could not access localStorage:", error);
-      }
-      setUserProfile(profile);
+        // The onSnapshot listener will update the userProfile state
     } else {
-      console.error("Invalid role selected");
+        console.error("Invalid role selected");
+        setLoading(false);
     }
   };
   
   const signOut = () => {
-    try {
-      localStorage.removeItem('userRole');
-    } catch (error) {
-       console.error("Could not access localStorage:", error);
-    }
+    localStorage.removeItem('userRole');
     setUserProfile(null);
     router.push('/');
   };

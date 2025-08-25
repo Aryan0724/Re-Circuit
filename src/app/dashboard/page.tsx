@@ -5,10 +5,12 @@ import { PageHeader } from '@/components/page-header';
 import { useAuth } from '@/hooks/use-auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Award, Package, Star } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PickupRequestForm } from '@/components/citizen/pickup-request-form';
 import { UserPickupsList } from '@/components/citizen/user-pickups-list';
+import { useEffect, useState } from 'react';
+import { db } from '@/lib/firebase';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
 function StatCard({ icon, title, value, color }: { icon: React.ReactNode; title: string; value: string | number; color: string }) {
   return (
@@ -26,6 +28,19 @@ function StatCard({ icon, title, value, color }: { icon: React.ReactNode; title:
 
 export default function CitizenDashboardPage() {
   const { userProfile, loading } = useAuth();
+  const [totalPickups, setTotalPickups] = useState(0);
+
+  useEffect(() => {
+    if (!userProfile?.uid) return;
+
+    const pickupsQuery = query(collection(db, 'pickups'), where('citizenId', '==', userProfile.uid));
+    const unsubscribe = onSnapshot(pickupsQuery, (snapshot) => {
+      setTotalPickups(snapshot.size);
+    });
+
+    return () => unsubscribe();
+  }, [userProfile?.uid]);
+
 
   if (loading || !userProfile) {
     return (
@@ -50,7 +65,7 @@ export default function CitizenDashboardPage() {
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
         <StatCard icon={<Star className="h-5 w-5" />} title="Your Credits" value={userProfile.credits ?? 0} color="yellow-500" />
-        <StatCard icon={<Package className="h-5 w-5" />} title="Total Pickups" value={0} color="blue-500" />
+        <StatCard icon={<Package className="h-5 w-5" />} title="Total Pickups" value={totalPickups} color="blue-500" />
         <StatCard icon={<Award className="h-5 w-5" />} title="Eco-Badge" value="Seedling" color="green-500" />
       </div>
 

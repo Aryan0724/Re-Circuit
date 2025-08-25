@@ -7,6 +7,9 @@ import type { PickupRequest, PickupStatus } from '@/types';
 import { Package, Hourglass, CheckCircle2, XCircle, Truck } from 'lucide-react';
 import Image from 'next/image';
 import { formatDistanceToNow } from 'date-fns';
+import { useAuth } from '@/hooks/use-auth';
+import { db } from '@/lib/firebase';
+import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 
 const statusConfig: Record<PickupStatus, { label: string; icon: React.ReactNode; color: string }> = {
   pending: { label: 'Pending', icon: <Hourglass className="h-3 w-3" />, color: 'bg-yellow-500' },
@@ -15,52 +18,37 @@ const statusConfig: Record<PickupStatus, { label: string; icon: React.ReactNode;
   rejected: { label: 'Rejected', icon: <XCircle className="h-3 w-3" />, color: 'bg-red-500' },
 };
 
-// Mock data, in a real app this would come from a database
-const mockPickups: Omit<PickupRequest, 'createdAt'>[] = [
-    {
-        id: '1',
-        citizenId: 'citizen-001',
-        citizenName: 'Eco Citizen',
-        category: 'Laptop',
-        description: 'Old Dell laptop, not turning on.',
-        location: { displayAddress: '123 Green St, Eco City', lat: 0, lon: 0 },
-        photoURL: 'https://placehold.co/128x128.png',
-        status: 'completed',
-    },
-    {
-        id: '2',
-        citizenId: 'citizen-001',
-        citizenName: 'Eco Citizen',
-        category: 'Mobile',
-        description: 'Cracked screen iPhone X',
-        location: { displayAddress: '123 Green St, Eco City', lat: 0, lon: 0 },
-        photoURL: 'https://placehold.co/128x128.png',
-        status: 'accepted',
-    },
-     {
-        id: '3',
-        citizenId: 'citizen-001',
-        citizenName: 'Eco Citizen',
-        category: 'Battery',
-        description: 'Leaking car battery',
-        location: { displayAddress: '123 Green St, Eco City', lat: 0, lon: 0 },
-        photoURL: 'https://placehold.co/128x128.png',
-        status: 'pending',
-    }
-];
-
 
 export function UserPickupsList() {
+  const { userProfile } = useAuth();
   const [pickups, setPickups] = useState<PickupRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate fetching data
+    if (!userProfile?.uid) {
+        setLoading(false);
+        return;
+    }
+    
     setLoading(true);
-    const pickupsWithDate = mockPickups.map(p => ({ ...p, createdAt: new Date() as any }));
-    setPickups(pickupsWithDate);
-    setLoading(false);
-  }, []);
+    const q = query(
+        collection(db, 'pickups'), 
+        where('citizenId', '==', userProfile.uid),
+        orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const pickupsData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate() // Convert Firestore Timestamp to Date
+        })) as PickupRequest[];
+        setPickups(pickupsData);
+        setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [userProfile?.uid]);
 
   return (
     <Card className="shadow-lg h-full">
@@ -99,8 +87,7 @@ export function UserPickupsList() {
                         <h4 className="font-semibold">{pickup.category}</h4>
                         <p className="text-sm text-muted-foreground truncate">{pickup.description}</p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {/* We use a static date since it's mock data */}
-                          {formatDistanceToNow(new Date(2024, 4, 10), { addSuffix: true })}
+                          {pickup.createdAt ? formatDistanceToNow(new Date(pickup.createdAt), { addSuffix: true }) : 'Just now'}
                         </p>
                       </div>
                       <Badge className={`${config.color} text-white hover:${config.color} flex items-center gap-1.5`}>

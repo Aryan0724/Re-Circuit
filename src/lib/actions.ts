@@ -1,14 +1,19 @@
 'use server';
 
-// NOTE: All database interactions have been removed for a simplified, client-only experience.
-// These functions are now placeholders and do not perform any real database operations.
-
+import { doc, addDoc, updateDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
+import { db, storage } from './firebase';
 import type { PickupStatus } from '@/types';
 
 export async function approveRecycler(uid: string, approved: boolean) {
-  console.log(`Simulating approval for recycler ${uid} to ${approved}`);
-  // In a real app, you would update the user document in Firestore.
-  return { success: true };
+  try {
+    const userRef = doc(db, 'users', uid);
+    await updateDoc(userRef, { approved });
+    return { success: true };
+  } catch (error) {
+    console.error("Error approving recycler: ", error);
+    return { success: false, error: (error as Error).message };
+  }
 }
 
 export async function createPickupRequest(
@@ -17,19 +22,66 @@ export async function createPickupRequest(
         citizenName: string;
         category: string;
         description: string;
-        photoDataUrl: string; // This would be uploaded to storage
+        photoDataUrl: string;
+        address: string;
     }
 ) {
-    console.log('Simulating pickup request creation:', data);
-    // In a real app, this would create a new document in the 'pickups' collection.
-    // The photoDataUrl would be uploaded to Firebase Storage and the URL saved.
-    return { success: true, id: `mock-${Date.now()}` };
+    try {
+        // 1. Upload image to Firebase Storage
+        const storageRef = ref(storage, `pickups/${Date.now()}-${Math.random().toString(36).substring(2)}`);
+        // The photoDataUrl is a Data URL, we need to extract the Base64 part
+        const uploadResult = await uploadString(storageRef, data.photoDataUrl, 'data_url');
+        const photoURL = await getDownloadURL(uploadResult.ref);
+
+        // 2. Create pickup request document in Firestore
+        await addDoc(collection(db, 'pickups'), {
+          citizenId: data.citizenId,
+          citizenName: data.citizenName,
+          category: data.category,
+          description: data.description,
+          location: {
+            displayAddress: data.address,
+            // Mock coordinates for now
+            lat: 0, 
+            lon: 0,
+          },
+          photoURL: photoURL,
+          status: 'pending',
+          createdAt: serverTimestamp(),
+        });
+        
+        return { success: true };
+    } catch (error) {
+        console.error("Error creating pickup request: ", error);
+        return { success: false, error: (error as Error).message };
+    }
 }
 
 
-export async function updatePickupStatus(pickupId: string, status: PickupStatus, recyclerId?: string) {
-    console.log(`Simulating update of pickup ${pickupId} to status ${status}`);
-    // In a real app, this would update the pickup document.
-    // If status is 'completed', it would also award credits to the citizen.
-    return { success: true };
+export async function updatePickupStatus(pickupId: string, status: PickupStatus, recyclerId?: string, citizenId?: string) {
+    try {
+        const pickupRef = doc(db, 'pickups', pickupId);
+        const updateData: any = { status };
+
+        if (status === 'accepted' && recyclerId) {
+            updateData.recyclerId = recyclerId;
+        }
+
+        await updateDoc(pickupRef, updateData);
+
+        // Award credits for completed pickups
+        if (status === 'completed' && citizenId) {
+            const userRef = doc(db, 'users', citizenId);
+            const userSnap = await (await import('firebase/firestore')).getDoc(userRef);
+            if (userSnap.exists()) {
+                const currentCredits = userSnap.data().credits ?? 0;
+                await updateDoc(userRef, { credits: currentCredits + 50 }); // Award 50 credits
+            }
+        }
+        
+        return { success: true };
+    } catch (error) {
+        console.error("Error updating pickup status: ", error);
+        return { success: false, error: (error as Error).message };
+    }
 }

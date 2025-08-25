@@ -6,36 +6,33 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import type { UserProfile } from '@/types';
-
-const mockRecyclers: UserProfile[] = [
-    {
-        uid: 'recycler-001',
-        role: 'Recycler',
-        name: 'Green Recyclers',
-        email: 'recycler@example.com',
-        photoURL: 'https://placehold.co/100x100.png',
-        approved: true,
-    },
-    {
-        uid: 'recycler-002',
-        role: 'Recycler',
-        name: 'Eco Warriors Inc.',
-        email: 'warriors@example.com',
-        photoURL: 'https://placehold.co/100x100.png',
-        approved: false,
-    },
-];
+import { db } from '@/lib/firebase';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { approveRecycler } from '@/lib/actions';
 
 export function RecyclerManagement() {
-  const [recyclers, setRecyclers] = useState<UserProfile[]>(mockRecyclers);
-  const [loading, setLoading] = useState(false);
+  const [recyclers, setRecyclers] = useState<UserProfile[]>([]);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
+  useEffect(() => {
+    const q = query(collection(db, 'users'), where('role', '==', 'Recycler'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const recyclersData = snapshot.docs.map(doc => ({ ...doc.data(), uid: doc.id })) as UserProfile[];
+      setRecyclers(recyclersData);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   const handleApprovalChange = async (uid: string, approved: boolean) => {
-    setRecyclers(currentRecyclers =>
-      currentRecyclers.map(r => r.uid === uid ? { ...r, approved } : r)
-    );
-    toast({ title: `Recycler ${approved ? 'approved' : 'unapproved'}.` });
+    const result = await approveRecycler(uid, approved);
+    if (result.success) {
+        toast({ title: `Recycler ${approved ? 'approved' : 'unapproved'}.` });
+    } else {
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not update recycler status.' });
+    }
   };
 
   return (

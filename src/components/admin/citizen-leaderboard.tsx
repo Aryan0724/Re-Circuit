@@ -5,34 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Award } from 'lucide-react';
 import type { UserProfile } from '@/types';
-
-
-const mockCitizens: UserProfile[] = [
-    {
-        uid: 'citizen-001',
-        role: 'Citizen',
-        name: 'Eco Citizen',
-        email: 'citizen@example.com',
-        photoURL: 'https://placehold.co/100x100.png',
-        credits: 420,
-    },
-    {
-        uid: 'citizen-002',
-        role: 'Citizen',
-        name: 'Jane Green',
-        email: 'jane@example.com',
-        photoURL: 'https://placehold.co/100x100.png',
-        credits: 350,
-    },
-    {
-        uid: 'citizen-003',
-        role: 'Citizen',
-        name: 'Recycle Rick',
-        email: 'rick@example.com',
-        photoURL: 'https://placehold.co/100x100.png',
-        credits: 280,
-    }
-];
+import { db } from '@/lib/firebase';
+import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore';
 
 
 export function CitizenLeaderboard() {
@@ -40,11 +14,20 @@ export function CitizenLeaderboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
-    // Sort mock citizens by credits
-    const sortedCitizens = [...mockCitizens].sort((a, b) => (b.credits ?? 0) - (a.credits ?? 0));
-    setCitizens(sortedCitizens);
-    setLoading(false);
+    const q = query(
+        collection(db, 'users'), 
+        where('role', '==', 'Citizen'),
+        orderBy('credits', 'desc'),
+        limit(5)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const citizensData = snapshot.docs.map(doc => ({...doc.data(), uid: doc.id})) as UserProfile[];
+        setCitizens(citizensData);
+        setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   return (
