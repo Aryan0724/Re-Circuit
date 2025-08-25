@@ -29,7 +29,7 @@ const mockAllPickups: Omit<PickupRequest, 'createdAt'>[] = [
 export function ContractorTable() {
   const [pickups, setPickups] = useState<PickupRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({ status: '', category: '', location: '' });
+  const [filters, setFilters] = useState({ status: 'all', category: 'all', location: '' });
 
   useEffect(() => {
     setLoading(true);
@@ -40,8 +40,8 @@ export function ContractorTable() {
   const filteredPickups = useMemo(() => {
     return pickups.filter(pickup => {
       return (
-        (filters.status === '' || pickup.status === filters.status) &&
-        (filters.category === '' || pickup.category === filters.category) &&
+        (filters.status === 'all' || pickup.status === filters.status) &&
+        (filters.category === 'all' || pickup.category === filters.category) &&
         (filters.location === '' || pickup.location.displayAddress.toLowerCase().includes(filters.location.toLowerCase()))
       );
     });
@@ -81,10 +81,10 @@ export function ContractorTable() {
             onChange={(e) => setFilters(f => ({ ...f, location: e.target.value }))}
             className="md:max-w-xs"
           />
-          <Select onValueChange={(value) => setFilters(f => ({ ...f, category: value }))}>
+          <Select onValueChange={(value) => setFilters(f => ({ ...f, category: value }))} defaultValue="all">
             <SelectTrigger className="md:w-[180px]"><SelectValue placeholder="Filter by category" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Categories</SelectItem>
+              <SelectItem value="all">All Categories</SelectItem>
               <SelectItem value="Laptop">Laptop</SelectItem>
               <SelectItem value="Mobile">Mobile</SelectItem>
               <SelectItem value="Battery">Battery</SelectItem>
@@ -92,10 +92,10 @@ export function ContractorTable() {
               <SelectItem value="Other">Other</SelectItem>
             </SelectContent>
           </Select>
-          <Select onValueChange={(value) => setFilters(f => ({ ...f, status: value }))}>
+          <Select onValueChange={(value) => setFilters(f => ({ ...f, status: value }))} defaultValue="all">
             <SelectTrigger className="md:w-[180px]"><SelectValue placeholder="Filter by status" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Statuses</SelectItem>
+              <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="accepted">Accepted</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
