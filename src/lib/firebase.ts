@@ -2,7 +2,6 @@
 import { initializeApp, getApp, getApps, type FirebaseOptions } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
-import 'dotenv/config';
 
 // Your web app's Firebase configuration
 const firebaseConfig: FirebaseOptions = {
@@ -13,15 +12,6 @@ const firebaseConfig: FirebaseOptions = {
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
-
-// Validate the configuration
-const requiredKeys: (keyof FirebaseOptions)[] = ['apiKey', 'authDomain', 'projectId'];
-for (const key of requiredKeys) {
-    if (!firebaseConfig[key]) {
-        throw new Error(`Firebase config is missing key: ${key}. Check your .env file.`);
-    }
-}
-
 
 // Initialize Firebase
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
