@@ -47,6 +47,7 @@ interface AuthContextType {
   loading: boolean;
   signOut: () => void;
   setUserRole: (role: UserRole) => void;
+  updateUserProfile: (updates: Partial<Pick<UserProfile, 'name' | 'photoURL'>>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -57,12 +58,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  useEffect(() => {
-    // Check for a "logged in" user in localStorage
+  const loadProfile = () => {
     const storedRole = localStorage.getItem('userRole') as UserRole | null;
     if (storedRole) {
       const uid = roleToUidMap[storedRole];
-      const profile = { uid, ...mockUsers[storedRole] };
+      const baseProfile = mockUsers[storedRole];
+      const storedProfile = JSON.parse(localStorage.getItem(`user_profile_${uid}`) || '{}');
+
+      const profile: UserProfile = { 
+        uid, 
+        ...baseProfile,
+        ...storedProfile, // Overwrite with stored edits
+      };
       
       if (profile.role === 'Recycler') {
         const isApproved = localStorage.getItem(`recycler_${uid}_approved`) === 'true';
@@ -70,7 +77,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setUserProfile(profile);
     }
+  };
+
+  useEffect(() => {
+    setLoading(true);
+    loadProfile();
     setLoading(false);
+
+    window.addEventListener('profile-updated', loadProfile);
+    return () => window.removeEventListener('profile-updated', loadProfile);
   }, []);
 
   useEffect(() => {
@@ -107,6 +122,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const storedApproval = localStorage.getItem(`recycler_${uid}_approved`);
             fullProfile.approved = storedApproval === 'true';
         }
+        
+        // Also clear any previous profile edits for that role
+        localStorage.removeItem(`user_profile_${uid}`);
 
         setUserProfile(fullProfile);
     } else {
@@ -117,11 +135,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   
   const signOut = () => {
     localStorage.removeItem('userRole');
+    // We don't remove the profile edits, so they persist on next login
     setUserProfile(null);
     router.push('/');
   };
 
-  const value = { userProfile, loading, signOut, setUserRole };
+  const updateUserProfile = (updates: Partial<Pick<UserProfile, 'name' | 'photoURL'>>) => {
+    if (!userProfile) return;
+    
+    const updatedProfile = { ...userProfile, ...updates };
+    
+    // Update local state
+    setUserProfile(updatedProfile);
+
+    // Persist changes to localStorage
+    const storedProfile = JSON.parse(localStorage.getItem(`user_profile_${userProfile.uid}`) || '{}');
+    const newStoredProfile = { ...storedProfile, ...updates };
+    localStorage.setItem(`user_profile_${userProfile.uid}`, JSON.stringify(newStoredProfile));
+
+    // Dispatch event for other components if needed, though state update should cover it
+    window.dispatchEvent(new CustomEvent('profile-updated'));
+  };
+
+  const value = { userProfile, loading, signOut, setUserRole, updateUserProfile };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

@@ -4,11 +4,13 @@ import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { LayoutDashboard, Recycle, Shield, HardHat, LogOut, User, PackagePlus, ListChecks, Activity, Users, Award } from 'lucide-react';
+import { LayoutDashboard, Recycle, Shield, HardHat, LogOut, User, Settings, PackagePlus, ListChecks, Activity, Users, Award } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@/types';
+import { ProfileEditor } from '@/components/profile/profile-editor';
+import { useState } from 'react';
 
 const navItemsByRole: Record<UserRole, { href: string; label: string; icon: React.ElementType }[]> = {
   Citizen: [
@@ -35,6 +37,7 @@ const roleIcons: Record<UserRole, React.ElementType> = {
 export function AppSidebar() {
   const { userProfile, signOut, loading } = useAuth();
   const pathname = usePathname();
+  const [isProfileEditorOpen, setIsProfileEditorOpen] = useState(false);
 
   if (loading || !userProfile) {
     return (
@@ -89,13 +92,25 @@ export function AppSidebar() {
               <AvatarImage src={userProfile.photoURL} alt={userProfile.name} />
               <AvatarFallback>{userProfile.name.charAt(0)}</AvatarFallback>
             </Avatar>
-            <div className="hidden md:flex flex-col">
+            <div className="hidden md:flex flex-col flex-1 overflow-hidden">
               <span className="font-semibold text-sm truncate">{userProfile.name}</span>
               <span className="text-xs text-muted-foreground flex items-center gap-1">
                 <RoleIcon className="h-3 w-3" />
                 {userProfile.role}
               </span>
             </div>
+             <ProfileEditor open={isProfileEditorOpen} onOpenChange={setIsProfileEditorOpen}>
+                <Tooltip delayDuration={0}>
+                    <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 hidden md:inline-flex" onClick={() => setIsProfileEditorOpen(true)}>
+                           <Settings className="h-4 w-4" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">
+                        Edit Profile
+                    </TooltipContent>
+                </Tooltip>
+             </ProfileEditor>
           </div>
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
