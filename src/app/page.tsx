@@ -1,46 +1,44 @@
 
 'use client';
 
-import Link from 'next/link';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { User, Settings, HardHat, Recycle } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import WelcomeScreen from '@/components/welcome-screen';
+import { Skeleton } from '@/components/ui/skeleton';
+import DashboardLayout from '@/components/dashboard-layout';
 
 export default function Home() {
-  const roles = [
-    { name: 'Citizen', href: '/citizen', icon: User },
-    { name: 'Admin', href: '/admin', icon: Settings },
-    { name: 'Contractor', href: '/contractor', icon: HardHat },
-    { name: 'Recycler', href: '/recycler', icon: Recycle },
-  ];
+  const { userProfile, loading } = useAuth();
+  const router = useRouter();
 
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-transparent py-12">
-      <h1 className="text-4xl font-bold mb-10 text-foreground">Select Your Role</h1>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 w-full max-w-6xl px-4">
-        {roles.map((role) => (
-          <Link key={role.name} href={role.href} passHref>
-            <Card className="flex flex-col items-center justify-center p-6 text-center hover:shadow-lg transition-shadow duration-300 cursor-pointer h-full bg-card/80 backdrop-blur-sm">
-              <CardHeader>
-                <div className="flex justify-center mb-4">
-                  <role.icon className="w-12 h-12 text-primary" />
+  useEffect(() => {
+    if (!loading && userProfile?.role) {
+      router.push(`/${userProfile.role.toLowerCase()}`);
+    }
+  }, [userProfile, loading, router]);
+
+  if (loading || (userProfile && userProfile.role)) {
+    return (
+       <DashboardLayout>
+         <div className="flex items-center justify-center min-h-[calc(100vh-10rem)]">
+             <div className="space-y-4 text-center">
+                <p className="text-muted-foreground">Loading your dashboard...</p>
+                <Skeleton className="h-28 w-full" />
+                <div className="mt-8 grid gap-8 lg:grid-cols-5">
+                    <div className="lg:col-span-2"><Skeleton className="h-96" /></div>
+                    <div className="lg:col-span-3"><Skeleton className="h-96" /></div>
                 </div>
-                <CardTitle className="text-xl font-semibold">{role.name}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  {role.name === 'Citizen' && 'Manage your e-waste pickups and track your impact.'}
-                  {role.name === 'Admin' && 'Oversee platform activity and manage users.'}
-                  {role.name === 'Contractor' && 'Manage incoming e-waste pickup requests for your contracts.'}
-                  {role.name === 'Recycler' && 'View available pickups and plan your recycling routes.'}
-                </p>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
-      </div>
-      <footer className="mt-12 text-center text-muted-foreground text-sm">
-        © {new Date().getFullYear()} E-Waste Recycling Platform
-      </footer>
-    </div>
-  );
+            </div>
+       </div>
+       </DashboardLayout>
+    );
+  }
+  
+  if (!userProfile?.role) {
+    return <WelcomeScreen />;
+  }
+
+  // This part should ideally not be reached
+  return null;
 }

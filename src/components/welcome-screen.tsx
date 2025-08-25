@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,36 +17,35 @@ import { useAuth } from '@/hooks/use-auth';
 const selectableRoles: UserRole[] = ['Citizen', 'Recycler', 'Contractor'];
 
 const WelcomeScreen: React.FC = () => {
-  const { user, setUserRole } = useAuth();
+  const { userProfile, setUserRole } = useAuth();
   const [loadingRole, setLoadingRole] = useState<UserRole | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  if (!user) {
-    return null; // Or a loading indicator, but useAuth should redirect
+  if (!userProfile) {
+    return null; // Or a loading indicator
   }
 
   const handleRoleSelection = async (role: UserRole) => {
     setLoadingRole(role);
     setError(null);
-
     try {
-      await setUserRole(role);
-      // The redirect will be handled by the AuthProvider's useEffect
+      // The useAuth hook will handle the redirect
+      setUserRole(role);
     } catch (err) {
-      console.error("Error creating user profile in Firestore: ", err);
-      setError('Failed to create your profile. Please try again.');
+      console.error("Error setting user role: ", err);
+      setError('Failed to set your role. Please try again.');
       setLoadingRole(null);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-200 dark:from-gray-900 dark:to-black">
-      <Card className="w-full max-w-md mx-4 shadow-xl animate-in fade-in-0 zoom-in-95">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-transparent py-12">
+       <Card className="w-full max-w-md mx-4 shadow-xl animate-in fade-in-0 zoom-in-95 bg-card/80 backdrop-blur-sm">
         <CardHeader className="text-center">
-          <img src={user.photoURL || `https://avatar.vercel.sh/${user.uid}.png`} alt="User Avatar" className="w-24 h-24 mx-auto rounded-full mb-4 border-4 border-white dark:border-gray-800" />
-          <CardTitle className="text-3xl font-bold">Welcome, {user.displayName || 'Friend'}!</CardTitle>
+           <img src={userProfile.photoURL || `https://avatar.vercel.sh/${userProfile.uid}.png`} alt="User Avatar" className="w-24 h-24 mx-auto rounded-full mb-4 border-4 border-card" />
+          <CardTitle className="text-3xl font-bold">Welcome, {userProfile.name || 'Friend'}!</CardTitle>
           <CardDescription className="text-md pt-2">
-            To complete your registration, please select your role in the Re-Circuit ecosystem.
+            To get started, please select your role in the Re-Circuit ecosystem.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col space-y-4 pt-4">
