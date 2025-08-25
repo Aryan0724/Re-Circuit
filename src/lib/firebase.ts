@@ -10,7 +10,7 @@ const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyAcoz3FPtzMlqmVlhSKhKIIsR9dcv4ESYU",
   authDomain: "re-circuit.firebaseapp.com",
   projectId: "re-circuit",
-  storageBucket: "re-circuit.firebasestorage.app",
+  storageBucket: "re-circuit.appspot.com",
   messagingSenderId: "220008974760",
   appId: "1:220008974760:web:5fa2f57cf573fca058759d",
 };
