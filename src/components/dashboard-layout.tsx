@@ -1,30 +1,34 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
   SheetTrigger,
+  SheetClose,
 } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
-import { Menu, Home, User, Settings, HardHat, Recycle } from "lucide-react"
+import { Menu, LogOut, User } from "lucide-react"
 import Link from 'next/link';
 import { Separator } from '@/components/ui/separator';
-
-
-const navItems = [
-    { name: 'Home', href: '/', icon: Home },
-    { name: 'Citizen', href: '/citizen', icon: User },
-    { name: 'Admin', href: '/admin', icon: Settings },
-    { name: 'Contractor', href: '/contractor', icon: HardHat },
-    { name: 'Recycler', href: '/recycler', icon: Recycle },
-];
+import { useAuth } from '@/hooks/use-auth';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ProfileEditor } from '@/components/profile/profile-editor';
 
 function MobileSidebar() {
+    const { userProfile, loading, logout } = useAuth();
+    const [isProfileEditorOpen, setIsProfileEditorOpen] = useState(false);
+
+    const handleLogout = () => {
+        logout();
+        // The redirect is handled by the useAuth hook
+    };
+
+    if (loading) {
+        return null; // Or a loading spinner
+    }
+
     return (
         <Sheet>
             <SheetTrigger asChild>
@@ -34,23 +38,39 @@ function MobileSidebar() {
                 </Button>
             </SheetTrigger>
             <SheetContent side="left">
-                <SheetHeader>
-                    <SheetTitle>Re-Circuit</SheetTitle>
-                    <SheetDescription>
-                        E-Waste Management Platform
-                    </SheetDescription>
-                </SheetHeader>
-                <Separator className="my-4" />
-                <div className="flex flex-col space-y-2">
-                    {navItems.map(item => (
-                        <Link href={item.href} key={item.name} passHref>
-                           <Button variant="ghost" className="w-full justify-start gap-2">
-                             <item.icon className="h-4 w-4" />
-                             {item.name}
-                           </Button>
-                        </Link>
-                    ))}
-                </div>
+                 <div className="flex flex-col h-full">
+                     <div className="p-4 border-b">
+                         <div className="flex items-center gap-4">
+                            <Avatar>
+                                <AvatarImage src={userProfile?.photoURL} alt={userProfile?.name} />
+                                <AvatarFallback>{userProfile?.name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                                <p className="font-semibold">{userProfile?.name}</p>
+                                <p className="text-sm text-muted-foreground">{userProfile?.email}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex-1 py-4">
+                         <ProfileEditor open={isProfileEditorOpen} onOpenChange={setIsProfileEditorOpen}>
+                            <SheetClose asChild>
+                               <Button variant="ghost" className="w-full justify-start gap-2" onClick={() => setIsProfileEditorOpen(true)}>
+                                 <User className="h-4 w-4" />
+                                 Profile
+                               </Button>
+                            </SheetClose>
+                         </ProfileEditor>
+                    </div>
+                    <Separator />
+                    <div className="p-4">
+                        <SheetClose asChild>
+                            <Button variant="ghost" className="w-full justify-start gap-2" onClick={handleLogout}>
+                                <LogOut className="h-4 w-4" />
+                                Sign Out
+                            </Button>
+                        </SheetClose>
+                    </div>
+                 </div>
             </SheetContent>
         </Sheet>
     );
@@ -58,6 +78,16 @@ function MobileSidebar() {
 
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const { userProfile, loading } = useAuth();
+  
+  if (loading) {
+    return (
+       <div className="flex items-center justify-center min-h-screen">
+          <p>Loading user profile...</p>
+       </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen">
       <div className="flex-1 flex flex-col">
@@ -65,7 +95,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="container flex h-16 items-center space-x-4 sm:justify-between sm:space-x-0">
             <div className="flex gap-6 md:gap-10">
                 <Link href="/" className="flex items-center space-x-2">
-                    <Recycle className="h-6 w-6 text-primary" />
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-primary"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
                     <span className="inline-block font-bold">Re-Circuit</span>
                 </Link>
             </div>

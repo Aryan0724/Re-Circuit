@@ -14,12 +14,12 @@ export default function Home() {
   ];
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 py-12">
-      <h1 className="text-4xl font-bold mb-10 text-gray-800">Select Your Role</h1>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-transparent py-12">
+      <h1 className="text-4xl font-bold mb-10 text-foreground">Select Your Role</h1>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 w-full max-w-6xl px-4">
         {roles.map((role) => (
           <Link key={role.name} href={role.href} passHref>
-            <Card className="flex flex-col items-center justify-center p-6 text-center hover:shadow-lg transition-shadow duration-300 cursor-pointer h-full">
+            <Card className="flex flex-col items-center justify-center p-6 text-center hover:shadow-lg transition-shadow duration-300 cursor-pointer h-full bg-card/80 backdrop-blur-sm">
               <CardHeader>
                 <div className="flex justify-center mb-4">
                   <role.icon className="w-12 h-12 text-primary" />
@@ -38,7 +38,7 @@ export default function Home() {
           </Link>
         ))}
       </div>
-      <footer className="mt-12 text-center text-gray-500 text-sm">
+      <footer className="mt-12 text-center text-muted-foreground text-sm">
         © {new Date().getFullYear()} E-Waste Recycling Platform
       </footer>
     </div>

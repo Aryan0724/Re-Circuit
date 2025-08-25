@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import type { UserProfile } from '@/types';
+import { useAuth } from '@/hooks/use-auth';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.'),
@@ -23,11 +24,10 @@ interface ProfileEditorProps {
     children: React.ReactNode;
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    userProfile: UserProfile | null;
-    onUpdate: (updates: Partial<UserProfile>) => void;
 }
 
-export function ProfileEditor({ children, open, onOpenChange, userProfile, onUpdate }: ProfileEditorProps) {
+export function ProfileEditor({ children, open, onOpenChange }: ProfileEditorProps) {
+  const { userProfile, updateProfile } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
@@ -70,7 +70,7 @@ export function ProfileEditor({ children, open, onOpenChange, userProfile, onUpd
             profileUpdates.photoURL = preview;
         }
         
-        onUpdate(profileUpdates);
+        updateProfile(profileUpdates);
         
         toast({ title: 'Success!', description: 'Your profile has been updated.' });
         onOpenChange(false); // Close the dialog on success
@@ -108,7 +108,7 @@ export function ProfileEditor({ children, open, onOpenChange, userProfile, onUpd
                                 <label htmlFor="profile-pic-upload" className="cursor-pointer">
                                     <Avatar className="h-24 w-24 ring-2 ring-primary ring-offset-2 ring-offset-background">
                                         <AvatarImage src={preview || ''} alt={userProfile?.name} />
-                                        <AvatarFallback>{userProfile?.name.charAt(0)}</AvatarFallback>
+                                        <AvatarFallback>{userProfile?.name ? userProfile.name.charAt(0) : 'U'}</AvatarFallback>
                                     </Avatar>
                                     <Input id="profile-pic-upload" type="file" className="hidden" accept="image/*" onChange={e => { field.onChange(e.target.files); handleFileChange(e); }} />
                                 </label>
