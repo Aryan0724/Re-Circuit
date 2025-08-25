@@ -31,7 +31,11 @@ export function RecyclerDashboardClient({ initialPendingPickups, initialAccepted
   const { toast } = useToast();
 
   const handleGetDirections = (location: PickupLocation) => {
-    const url = `https://www.google.com/maps/search/?api=1&query=${location.lat},${location.lon}`;
+    if (!location?.displayAddress) {
+      toast({ variant: 'destructive', description: "Pickup location not available." });
+      return;
+    }
+    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location.displayAddress)}`;
     window.open(url, '_blank');
   };
 
