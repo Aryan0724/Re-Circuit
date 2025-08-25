@@ -1,14 +1,40 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { db } from '@/lib/firebase';
-import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
 import { Award } from 'lucide-react';
 import type { UserProfile } from '@/types';
+
+
+const mockCitizens: UserProfile[] = [
+    {
+        uid: 'citizen-001',
+        role: 'Citizen',
+        name: 'Eco Citizen',
+        email: 'citizen@example.com',
+        photoURL: 'https://placehold.co/100x100.png',
+        credits: 420,
+    },
+    {
+        uid: 'citizen-002',
+        role: 'Citizen',
+        name: 'Jane Green',
+        email: 'jane@example.com',
+        photoURL: 'https://placehold.co/100x100.png',
+        credits: 350,
+    },
+    {
+        uid: 'citizen-003',
+        role: 'Citizen',
+        name: 'Recycle Rick',
+        email: 'rick@example.com',
+        photoURL: 'https://placehold.co/100x100.png',
+        credits: 280,
+    }
+];
+
 
 export function CitizenLeaderboard() {
   const [citizens, setCitizens] = useState<UserProfile[]>([]);
@@ -16,17 +42,10 @@ export function CitizenLeaderboard() {
 
   useEffect(() => {
     setLoading(true);
-    const q = query(
-      collection(db, 'users'),
-      where('role', '==', 'Citizen'),
-      orderBy('credits', 'desc'),
-      limit(10)
-    );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setCitizens(snapshot.docs.map(doc => doc.data() as UserProfile));
-      setLoading(false);
-    });
-    return () => unsubscribe();
+    // Sort mock citizens by credits
+    const sortedCitizens = [...mockCitizens].sort((a, b) => (b.credits ?? 0) - (a.credits ?? 0));
+    setCitizens(sortedCitizens);
+    setLoading(false);
   }, []);
 
   return (
@@ -37,7 +56,7 @@ export function CitizenLeaderboard() {
       </CardHeader>
       <CardContent className="space-y-4">
         {loading ? (
-          Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)
+          <p>Loading...</p>
         ) : citizens.length === 0 ? (
           <p className="text-muted-foreground text-center py-8">No citizen data available.</p>
         ) : (

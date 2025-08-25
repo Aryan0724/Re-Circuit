@@ -77,22 +77,19 @@ export function PickupRequestForm() {
     
     try {
         const photoDataUrl = preview!; // Already loaded in preview
-        const result = await createPickupRequest({
+        // In a real app, this would call a server action to create a record in the database.
+        // Here, we just log it and show a success message.
+        console.log("Mock Pickup Request Submitted: ", {
             citizenId: userProfile.uid,
             citizenName: userProfile.name,
-            category: values.category,
-            description: values.description,
-            location: { displayAddress: values.address, lat: 0, lon: 0 }, // Placeholder lat/lon
-            photoDataUrl,
+            ...values
         });
 
-      if (result.success) {
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
+
         toast({ title: 'Success!', description: 'Your pickup request has been submitted.' });
         form.reset();
         setPreview(null);
-      } else {
-        throw new Error(result.error);
-      }
     } catch (error) {
       console.error(error);
       toast({

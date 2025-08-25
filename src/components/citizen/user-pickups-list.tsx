@@ -1,12 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/use-auth';
-import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { PickupRequest, PickupStatus } from '@/types';
 import { Package, Hourglass, CheckCircle2, XCircle, Truck } from 'lucide-react';
@@ -20,32 +16,54 @@ const statusConfig: Record<PickupStatus, { label: string; icon: React.ReactNode;
   rejected: { label: 'Rejected', icon: <XCircle className="h-3 w-3" />, color: 'bg-red-500' },
 };
 
+// Mock data, in a real app this would come from a database
+const mockPickups: Omit<PickupRequest, 'createdAt'>[] = [
+    {
+        id: '1',
+        citizenId: 'citizen-001',
+        citizenName: 'Eco Citizen',
+        category: 'Laptop',
+        description: 'Old Dell laptop, not turning on.',
+        location: { displayAddress: '123 Green St, Eco City', lat: 0, lon: 0 },
+        photoURL: 'https://placehold.co/128x128.png',
+        status: 'completed',
+    },
+    {
+        id: '2',
+        citizenId: 'citizen-001',
+        citizenName: 'Eco Citizen',
+        category: 'Mobile',
+        description: 'Cracked screen iPhone X',
+        location: { displayAddress: '123 Green St, Eco City', lat: 0, lon: 0 },
+        photoURL: 'https://placehold.co/128x128.png',
+        status: 'accepted',
+    },
+     {
+        id: '3',
+        citizenId: 'citizen-001',
+        citizenName: 'Eco Citizen',
+        category: 'Battery',
+        description: 'Leaking car battery',
+        location: { displayAddress: '123 Green St, Eco City', lat: 0, lon: 0 },
+        photoURL: 'https://placehold.co/128x128.png',
+        status: 'pending',
+    }
+];
+
+
 export function UserPickupsList() {
-  const { userProfile } = useAuth();
   const [pickups, setPickups] = useState<PickupRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!userProfile) return;
-
+    // Simulate fetching data
     setLoading(true);
-    const q = query(
-      collection(db, 'pickups'),
-      where('citizenId', '==', userProfile.uid),
-      orderBy('createdAt', 'desc')
-    );
-
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const pickupsData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      } as PickupRequest));
-      setPickups(pickupsData);
+    setTimeout(() => {
+      const pickupsWithDate = mockPickups.map(p => ({ ...p, createdAt: new Date() as any }));
+      setPickups(pickupsWithDate);
       setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [userProfile]);
+    }, 500);
+  }, []);
 
   return (
     <Card className="shadow-lg h-full">
@@ -56,7 +74,7 @@ export function UserPickupsList() {
       <CardContent>
         <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
           {loading ? (
-            Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-20 w-full" />)
+            <p>Loading...</p>
           ) : pickups.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
                 <Package className="mx-auto h-12 w-12" />
@@ -88,7 +106,8 @@ export function UserPickupsList() {
                         <h4 className="font-semibold">{pickup.category}</h4>
                         <p className="text-sm text-muted-foreground truncate">{pickup.description}</p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {formatDistanceToNow(pickup.createdAt.toDate(), { addSuffix: true })}
+                          {/* We use a static date since it's mock data */}
+                          {formatDistanceToNow(new Date(2024, 4, 10), { addSuffix: true })}
                         </p>
                       </div>
                       <Badge className={`${config.color} text-white hover:${config.color} flex items-center gap-1.5`}>

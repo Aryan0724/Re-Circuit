@@ -40,28 +40,13 @@ const mockUsers: Record<UserRole, UserProfile> = {
   },
 };
 
-// Function to create user document in Firestore if it doesn't exist
-const createUserDocument = async (user: UserProfile) => {
-  if (!user) return;
-  const userRef = doc(db, 'users', user.uid);
-  const userSnap = await getDoc(userRef);
-  if (!userSnap.exists()) {
-    try {
-      await setDoc(userRef, user);
-    } catch (error) {
-      console.error("Error creating user document:", error);
-    }
-  }
-};
-
-
 interface AuthContextType {
   user: UserProfile | null;
   userProfile: UserProfile | null;
   loading: boolean;
   signOut: () => Promise<void>;
   setUserRole: (role: UserRole) => Promise<void>;
-  signInWithGoogle: () => Promise<void>; // Kept for type consistency, but will be a no-op
+  signInWithGoogle: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -78,7 +63,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (storedRole && mockUsers[storedRole]) {
       const profile = mockUsers[storedRole];
       setUserProfile(profile);
-      createUserDocument(profile);
     }
     setLoading(false);
   }, []);
@@ -119,16 +103,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     const profile = mockUsers[role];
     if (profile) {
-      await createUserDocument(profile);
       localStorage.setItem('userRole', role);
       setUserProfile(profile);
     } else {
       console.error("Invalid role selected");
     }
-    // No need to set loading to false, as the effect will trigger a redirect
   };
   
-  // No-op function to maintain type consistency where signInWithGoogle was used
   const signInWithGoogle = async () => {
     console.warn("signInWithGoogle is not implemented in fake auth.");
   };
