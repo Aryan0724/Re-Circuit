@@ -10,9 +10,6 @@ import { Download } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import type { PickupRequest, PickupStatus } from '@/types';
 import { format } from 'date-fns';
-import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-
 
 const statusColors: Record<PickupStatus, string> = {
   pending: 'bg-yellow-500',
@@ -27,20 +24,40 @@ export function ContractorTable() {
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({ status: 'all', category: 'all', location: '' });
 
-  useEffect(() => {
-    setLoading(true);
-    const q = query(collection(db, 'pickups'), orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-        const pickupsData = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            createdAt: doc.data().createdAt?.toDate()
-        })) as PickupRequest[];
-        setPickups(pickupsData);
-        setLoading(false);
+  const refreshAllPickups = () => {
+    const allPickups: PickupRequest[] = [];
+    const pending = JSON.parse(localStorage.getItem('pickups_pending') || '[]');
+    allPickups.push(...pending);
+
+    // In a real scenario, you would iterate over all users/recyclers
+    // For mock, we'll just check the known ones
+    const recyclerIds = ['recycler-001', 'recycler-002'];
+    recyclerIds.forEach(id => {
+      const accepted = JSON.parse(localStorage.getItem(`pickups_accepted_${id}`) || '[]');
+      allPickups.push(...accepted);
+    });
+    
+    // We also need to find completed/rejected ones from citizen records
+    const citizenIds = ['citizen-001', 'citizen-002', 'citizen-003', 'citizen-004', 'citizen-005'];
+    citizenIds.forEach(id => {
+        const citizenPickups: PickupRequest[] = JSON.parse(localStorage.getItem(`pickups_${id}`) || '[]');
+        citizenPickups.forEach(p => {
+            if (!allPickups.some(ap => ap.id === p.id)) {
+                allPickups.push(p);
+            }
+        });
     });
 
-    return () => unsubscribe();
+    setPickups(allPickups);
+  }
+
+  useEffect(() => {
+    setLoading(true);
+    refreshAllPickups();
+    setLoading(false);
+
+    window.addEventListener('pickups-updated', refreshAllPickups);
+    return () => window.removeEventListener('pickups-updated', refreshAllPickups);
   }, []);
 
   const filteredPickups = useMemo(() => {

@@ -3,8 +3,6 @@
 import React, { useState, useEffect, createContext, useContext, type ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import type { UserProfile, UserRole } from '@/types';
-import { db } from '@/lib/firebase';
-import { doc, onSnapshot, setDoc, getDoc } from 'firebase/firestore';
 
 // Define mock users for fake authentication
 const mockUsers: Record<UserRole, Omit<UserProfile, 'uid'>> = {
@@ -63,17 +61,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Check for a "logged in" user in localStorage
     const storedRole = localStorage.getItem('userRole') as UserRole | null;
     if (storedRole) {
-        const uid = roleToUidMap[storedRole];
-        const unsub = onSnapshot(doc(db, "users", uid), (doc) => {
-            if (doc.exists()) {
-                setUserProfile(doc.data() as UserProfile);
-            }
-            setLoading(false);
-        });
-        return () => unsub();
-    } else {
-        setLoading(false);
+      const uid = roleToUidMap[storedRole];
+      const profile = { uid, ...mockUsers[storedRole] };
+      // In a real app, you might want to check if the recycler was approved.
+      // For this mock, we can check a separate localStorage item.
+      if (profile.role === 'Recycler') {
+        const isApproved = localStorage.getItem(`recycler_${uid}_approved`) === 'true';
+        profile.approved = isApproved;
+      }
+      setUserProfile(profile);
     }
+    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -97,27 +95,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [userProfile, loading, pathname, router]);
 
-  const setUserRole = async (role: UserRole) => {
+  const setUserRole = (role: UserRole) => {
     setLoading(true);
     const baseProfile = mockUsers[role];
     const uid = roleToUidMap[role];
 
     if (baseProfile) {
-        const userRef = doc(db, 'users', uid);
-        const userSnap = await getDoc(userRef);
-
-        if (!userSnap.exists()) {
-            // Create user document if it doesn't exist
-            const newProfile: UserProfile = { uid, ...baseProfile };
-            await setDoc(userRef, newProfile);
-        }
-        
         localStorage.setItem('userRole', role);
-        // The onSnapshot listener will update the userProfile state
+        setUserProfile({ uid, ...baseProfile });
     } else {
         console.error("Invalid role selected");
-        setLoading(false);
     }
+    setLoading(false);
   };
   
   const signOut = () => {

@@ -1,14 +1,15 @@
 'use server';
 
-import { doc, addDoc, updateDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadString, getDownloadURL } from 'firebase/storage';
-import { db, storage } from './firebase';
 import type { PickupStatus } from '@/types';
+
+// This is a mock implementation. In a real app, this would interact with a database.
 
 export async function approveRecycler(uid: string, approved: boolean) {
   try {
-    const userRef = doc(db, 'users', uid);
-    await updateDoc(userRef, { approved });
+    // In a local-only setup, we can use localStorage on the client,
+    // but server actions can't access that. We will handle this on the client.
+    // For the purpose of this server action, we just return success.
+    console.log(`Setting approval for ${uid} to ${approved}`);
     return { success: true };
   } catch (error) {
     console.error("Error approving recycler: ", error);
@@ -27,30 +28,10 @@ export async function createPickupRequest(
     }
 ) {
     try {
-        // 1. Upload image to Firebase Storage
-        const storageRef = ref(storage, `pickups/${Date.now()}-${Math.random().toString(36).substring(2)}`);
-        // The photoDataUrl is a Data URL, we need to extract the Base64 part
-        const uploadResult = await uploadString(storageRef, data.photoDataUrl, 'data_url');
-        const photoURL = await getDownloadURL(uploadResult.ref);
-
-        // 2. Create pickup request document in Firestore
-        await addDoc(collection(db, 'pickups'), {
-          citizenId: data.citizenId,
-          citizenName: data.citizenName,
-          category: data.category,
-          description: data.description,
-          location: {
-            displayAddress: data.address,
-            // Mock coordinates for now
-            lat: 0, 
-            lon: 0,
-          },
-          photoURL: photoURL,
-          status: 'pending',
-          createdAt: serverTimestamp(),
-        });
-        
-        return { success: true };
+        // This is a server action, but we'll be managing state on the client.
+        // This action can just return success, and the client will update its local state.
+        console.log('Pickup request created (mock):', data.description);
+        return { success: true, photoURL: data.photoDataUrl };
     } catch (error) {
         console.error("Error creating pickup request: ", error);
         return { success: false, error: (error as Error).message };
@@ -60,25 +41,8 @@ export async function createPickupRequest(
 
 export async function updatePickupStatus(pickupId: string, status: PickupStatus, recyclerId?: string, citizenId?: string) {
     try {
-        const pickupRef = doc(db, 'pickups', pickupId);
-        const updateData: any = { status };
-
-        if (status === 'accepted' && recyclerId) {
-            updateData.recyclerId = recyclerId;
-        }
-
-        await updateDoc(pickupRef, updateData);
-
-        // Award credits for completed pickups
-        if (status === 'completed' && citizenId) {
-            const userRef = doc(db, 'users', citizenId);
-            const userSnap = await (await import('firebase/firestore')).getDoc(userRef);
-            if (userSnap.exists()) {
-                const currentCredits = userSnap.data().credits ?? 0;
-                await updateDoc(userRef, { credits: currentCredits + 50 }); // Award 50 credits
-            }
-        }
-        
+        // Mock implementation
+        console.log(`Updating pickup ${pickupId} to ${status}`);
         return { success: true };
     } catch (error) {
         console.error("Error updating pickup status: ", error);

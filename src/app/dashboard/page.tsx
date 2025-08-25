@@ -9,8 +9,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { PickupRequestForm } from '@/components/citizen/pickup-request-form';
 import { UserPickupsList } from '@/components/citizen/user-pickups-list';
 import { useEffect, useState } from 'react';
-import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
 function StatCard({ icon, title, value, color }: { icon: React.ReactNode; title: string; value: string | number; color: string }) {
   return (
@@ -33,12 +31,17 @@ export default function CitizenDashboardPage() {
   useEffect(() => {
     if (!userProfile?.uid) return;
 
-    const pickupsQuery = query(collection(db, 'pickups'), where('citizenId', '==', userProfile.uid));
-    const unsubscribe = onSnapshot(pickupsQuery, (snapshot) => {
-      setTotalPickups(snapshot.size);
-    });
+    const getPickups = () => {
+        const storedPickups = localStorage.getItem(`pickups_${userProfile.uid}`);
+        if (storedPickups) {
+            setTotalPickups(JSON.parse(storedPickups).length);
+        }
+    }
+    getPickups();
+    
+    window.addEventListener('pickups-updated', getPickups);
+    return () => window.removeEventListener('pickups-updated', getPickups);
 
-    return () => unsubscribe();
   }, [userProfile?.uid]);
 
 

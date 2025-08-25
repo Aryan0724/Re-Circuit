@@ -8,8 +8,7 @@ import { Package, Hourglass, CheckCircle2, XCircle, Truck } from 'lucide-react';
 import Image from 'next/image';
 import { formatDistanceToNow } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
-import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+
 
 const statusConfig: Record<PickupStatus, { label: string; icon: React.ReactNode; color: string }> = {
   pending: { label: 'Pending', icon: <Hourglass className="h-3 w-3" />, color: 'bg-yellow-500' },
@@ -31,23 +30,23 @@ export function UserPickupsList() {
     }
     
     setLoading(true);
-    const q = query(
-        collection(db, 'pickups'), 
-        where('citizenId', '==', userProfile.uid),
-        orderBy('createdAt', 'desc')
-    );
+    const storedPickups = localStorage.getItem(`pickups_${userProfile.uid}`);
+    if (storedPickups) {
+        setPickups(JSON.parse(storedPickups));
+    }
+    setLoading(false);
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-        const pickupsData = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            createdAt: doc.data().createdAt?.toDate() // Convert Firestore Timestamp to Date
-        })) as PickupRequest[];
-        setPickups(pickupsData);
-        setLoading(false);
-    });
+    // Listen for custom event to update pickups
+    const handlePickupsUpdate = () => {
+        const updatedPickups = localStorage.getItem(`pickups_${userProfile.uid}`);
+        if (updatedPickups) {
+            setPickups(JSON.parse(updatedPickups));
+        }
+    };
+    window.addEventListener('pickups-updated', handlePickupsUpdate);
 
-    return () => unsubscribe();
+    return () => window.removeEventListener('pickups-updated', handlePickupsUpdate);
+
   }, [userProfile?.uid]);
 
   return (
@@ -67,7 +66,7 @@ export function UserPickupsList() {
             </div>
           ) : (
             <div>
-              {pickups.map((pickup) => {
+              {pickups.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((pickup) => {
                 const config = statusConfig[pickup.status];
                 return (
                   <div

@@ -5,29 +5,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Award } from 'lucide-react';
 import type { UserProfile } from '@/types';
-import { db } from '@/lib/firebase';
-import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore';
 
+const mockCitizens: UserProfile[] = [
+    { uid: 'citizen-001', role: 'Citizen', name: 'Eco Citizen', email: 'citizen@example.com', photoURL: 'https://placehold.co/100x100.png', credits: 420 },
+    { uid: 'citizen-002', role: 'Citizen', name: 'Jane Doe', email: 'jane@example.com', photoURL: 'https://placehold.co/100x100.png', credits: 350 },
+    { uid: 'citizen-003', role: 'Citizen', name: 'John Smith', email: 'john@example.com', photoURL: 'https://placehold.co/100x100.png', credits: 280 },
+    { uid: 'citizen-004', role: 'Citizen', name: 'Recycle Rosie', email: 'rosie@example.com', photoURL: 'https://placehold.co/100x100.png', credits: 210 },
+    { uid: 'citizen-005', role: 'Citizen', name: 'Green Greg', email: 'greg@example.com', photoURL: 'https://placehold.co/100x100.png', credits: 150 },
+]
 
 export function CitizenLeaderboard() {
   const [citizens, setCitizens] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(
-        collection(db, 'users'), 
-        where('role', '==', 'Citizen'),
-        orderBy('credits', 'desc'),
-        limit(5)
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-        const citizensData = snapshot.docs.map(doc => ({...doc.data(), uid: doc.id})) as UserProfile[];
-        setCitizens(citizensData);
-        setLoading(false);
-    });
-
-    return () => unsubscribe();
+    // Simulate fetching data
+    setCitizens(mockCitizens.sort((a, b) => (b.credits ?? 0) - (a.credits ?? 0)));
+    setLoading(false);
   }, []);
 
   return (

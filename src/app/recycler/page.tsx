@@ -13,8 +13,6 @@ import type { PickupRequest } from '@/types';
 import { Check, X } from 'lucide-react';
 import Image from 'next/image';
 import { RoutePlanner } from '@/components/recycler/route-planner';
-import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, or } from 'firebase/firestore';
 
 export default function RecyclerDashboardPage() {
   const { userProfile } = useAuth();
@@ -23,35 +21,54 @@ export default function RecyclerDashboardPage() {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  useEffect(() => {
+  const refreshPickups = () => {
     if (!userProfile?.uid) return;
+    const pending = JSON.parse(localStorage.getItem('pickups_pending') || '[]');
+    const accepted = JSON.parse(localStorage.getItem(`pickups_accepted_${userProfile.uid}`) || '[]');
+    setPendingPickups(pending);
+    setAcceptedPickups(accepted);
+  }
 
+  useEffect(() => {
     setLoading(true);
+    refreshPickups();
+    setLoading(false);
 
-    // Listener for pending pickups
-    const pendingQuery = query(collection(db, 'pickups'), where('status', '==', 'pending'));
-    const unsubPending = onSnapshot(pendingQuery, (snapshot) => {
-      const pickupsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PickupRequest[];
-      setPendingPickups(pickupsData);
-      setLoading(false);
-    });
-
-    // Listener for pickups accepted by the current recycler
-    const acceptedQuery = query(collection(db, 'pickups'), where('status', '==', 'accepted'), where('recyclerId', '==', userProfile.uid));
-    const unsubAccepted = onSnapshot(acceptedQuery, (snapshot) => {
-      const pickupsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PickupRequest[];
-      setAcceptedPickups(pickupsData);
-    });
-
-    return () => {
-      unsubPending();
-      unsubAccepted();
-    };
+    window.addEventListener('pickups-updated', refreshPickups);
+    return () => window.removeEventListener('pickups-updated', refreshPickups);
   }, [userProfile?.uid]);
   
-  const handleUpdateStatus = async (pickupId: string, status: 'accepted' | 'rejected' | 'completed') => {
-    const result = await updatePickupStatus(pickupId, status, userProfile?.uid);
+  const handleUpdateStatus = async (pickup: PickupRequest, status: 'accepted' | 'rejected' | 'completed') => {
+    const result = await updatePickupStatus(pickup.id, status, userProfile?.uid);
     if(result.success) {
+      // Remove from pending
+      const currentPending = JSON.parse(localStorage.getItem('pickups_pending') || '[]');
+      const newPending = currentPending.filter((p: PickupRequest) => p.id !== pickup.id);
+      localStorage.setItem('pickups_pending', JSON.stringify(newPending));
+
+      if (status === 'accepted') {
+        const acceptedKey = `pickups_accepted_${userProfile!.uid}`;
+        const currentAccepted = JSON.parse(localStorage.getItem(acceptedKey) || '[]');
+        const updatedPickup = { ...pickup, status: 'accepted', recyclerId: userProfile!.uid };
+        localStorage.setItem(acceptedKey, JSON.stringify([updatedPickup, ...currentAccepted]));
+      }
+       
+      if (status === 'completed') {
+        const acceptedKey = `pickups_accepted_${userProfile!.uid}`;
+        const currentAccepted = JSON.parse(localStorage.getItem(acceptedKey) || '[]');
+        const newAccepted = currentAccepted.filter((p: PickupRequest) => p.id !== pickup.id);
+        localStorage.setItem(acceptedKey, JSON.stringify(newAccepted));
+      }
+
+      // Update the original citizen's record
+      const citizenKey = `pickups_${pickup.citizenId}`;
+      const citizenPickups = JSON.parse(localStorage.getItem(citizenKey) || '[]');
+      const updatedCitizenPickups = citizenPickups.map((p: PickupRequest) => 
+        p.id === pickup.id ? { ...p, status } : p
+      );
+      localStorage.setItem(citizenKey, JSON.stringify(updatedCitizenPickups));
+
+      window.dispatchEvent(new CustomEvent('pickups-updated'));
       toast({ title: `Request ${status}` });
     } else {
       toast({ variant: 'destructive', title: 'Error', description: 'Could not update status.' });
@@ -99,8 +116,8 @@ export default function RecyclerDashboardPage() {
                             </div>
                         </div>
                         <div className="flex gap-2 mt-3 justify-end">
-                            <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(pickup.id, 'rejected')}><X className="h-4 w-4 mr-1" />Reject</Button>
-                            <Button size="sm" onClick={() => handleUpdateStatus(pickup.id, 'accepted')}><Check className="h-4 w-4 mr-1" />Accept</Button>
+                            <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(pickup, 'rejected')}><X className="h-4 w-4 mr-1" />Reject</Button>
+                            <Button size="sm" onClick={() => handleUpdateStatus(pickup, 'accepted')}><Check className="h-4 w-4 mr-1" />Accept</Button>
                         </div>
                     </div>
                 </div>
@@ -124,7 +141,7 @@ export default function RecyclerDashboardPage() {
                                 <p className="font-semibold">{pickup.category}</p>
                                 <p className="text-sm text-muted-foreground">{pickup.location.displayAddress}</p>
                             </div>
-                            <Button size="sm" onClick={() => handleUpdateStatus(pickup.id, 'completed', userProfile?.uid, pickup.citizenId)}><Check className="h-4 w-4 mr-1" />Mark Complete</Button>
+                            <Button size="sm" onClick={() => handleUpdateStatus(pickup, 'completed')}><Check className="h-4 w-4 mr-1" />Mark Complete</Button>
                         </div>
                     </div>
                 </div>

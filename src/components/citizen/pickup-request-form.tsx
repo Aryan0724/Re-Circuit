@@ -16,6 +16,7 @@ import { createPickupRequest } from '@/lib/actions';
 import { generatePickupDescription } from '@/ai/flows/generate-pickup-description';
 import { UploadCloud, Loader2, Wand2, MapPin } from 'lucide-react';
 import Image from 'next/image';
+import type { PickupRequest } from '@/types';
 
 const formSchema = z.object({
   category: z.string().min(1, 'Category is required'),
@@ -99,17 +100,46 @@ export function PickupRequestForm() {
     setIsSubmitting(true);
     
     try {
-        const photoDataUrl = preview!; 
-        
-        await createPickupRequest({
+        const result = await createPickupRequest({
           citizenId: userProfile.uid,
           citizenName: userProfile.name,
           ...values,
-          photoDataUrl,
+          photoDataUrl: preview!,
         });
-        toast({ title: 'Success!', description: 'Your pickup request has been submitted.' });
-        form.reset();
-        setPreview(null);
+
+        if (result.success && result.photoURL) {
+            const newPickup: PickupRequest = {
+                id: `pickup_${Date.now()}`,
+                citizenId: userProfile.uid,
+                citizenName: userProfile.name,
+                category: values.category,
+                description: values.description,
+                location: { displayAddress: values.address, lat: 0, lon: 0 },
+                photoURL: result.photoURL,
+                status: 'pending',
+                createdAt: new Date(),
+            };
+
+            // Store in citizen's pickups
+            const citizenPickupsKey = `pickups_${userProfile.uid}`;
+            const existingCitizenPickups = JSON.parse(localStorage.getItem(citizenPickupsKey) || '[]');
+            localStorage.setItem(citizenPickupsKey, JSON.stringify([newPickup, ...existingCitizenPickups]));
+            
+            // Store in global pending pickups
+            const pendingPickupsKey = `pickups_pending`;
+            const existingPendingPickups = JSON.parse(localStorage.getItem(pendingPickupsKey) || '[]');
+            localStorage.setItem(pendingPickupsKey, JSON.stringify([newPickup, ...existingPendingPickups]));
+            
+            // Dispatch event to notify other components
+            window.dispatchEvent(new CustomEvent('pickups-updated'));
+
+            toast({ title: 'Success!', description: 'Your pickup request has been submitted.' });
+            form.reset();
+            setPreview(null);
+        } else {
+            throw new Error('Submission failed on the server.');
+        }
+
     } catch (error) {
       console.error(error);
       toast({

@@ -6,9 +6,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import type { UserProfile } from '@/types';
-import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { approveRecycler } from '@/lib/actions';
+
+const mockRecyclers: UserProfile[] = [
+    { uid: 'recycler-001', role: 'Recycler', name: 'Green Recyclers', email: 'recycler@example.com', photoURL: 'https://placehold.co/100x100.png', approved: false },
+    { uid: 'recycler-002', role: 'Recycler', name: 'Eco Warriors', email: 'warriors@example.com', photoURL: 'https://placehold.co/100x100.png', approved: true },
+]
 
 export function RecyclerManagement() {
   const [recyclers, setRecyclers] = useState<UserProfile[]>([]);
@@ -16,19 +19,26 @@ export function RecyclerManagement() {
   const { toast } = useToast();
 
   useEffect(() => {
-    const q = query(collection(db, 'users'), where('role', '==', 'Recycler'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const recyclersData = snapshot.docs.map(doc => ({ ...doc.data(), uid: doc.id })) as UserProfile[];
-      setRecyclers(recyclersData);
-      setLoading(false);
+    // Load initial state from mock data and localStorage
+    const loadedRecyclers = mockRecyclers.map(r => {
+        const storedApproval = localStorage.getItem(`recycler_${r.uid}_approved`);
+        return {
+            ...r,
+            approved: storedApproval ? storedApproval === 'true' : r.approved,
+        };
     });
-
-    return () => unsubscribe();
+    setRecyclers(loadedRecyclers);
+    setLoading(false);
   }, []);
 
   const handleApprovalChange = async (uid: string, approved: boolean) => {
     const result = await approveRecycler(uid, approved);
     if (result.success) {
+        // Also update our mock state and localStorage
+        localStorage.setItem(`recycler_${uid}_approved`, String(approved));
+        setRecyclers(currentRecyclers => 
+            currentRecyclers.map(r => r.uid === uid ? { ...r, approved } : r)
+        );
         toast({ title: `Recycler ${approved ? 'approved' : 'unapproved'}.` });
     } else {
         toast({ variant: 'destructive', title: 'Error', description: 'Could not update recycler status.' });
