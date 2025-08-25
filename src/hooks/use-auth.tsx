@@ -39,8 +39,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (userDoc.exists()) {
       setUserProfile(userDoc.data() as UserProfile);
     } else {
-      // Profile needs to be created, might happen after role selection
-      setUserProfile(null);
+      // This case happens for a newly signed up user before role selection completes.
+      // We create a temporary profile from the auth object.
+      setUserProfile({
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          name: firebaseUser.displayName || 'New User',
+          photoURL: firebaseUser.photoURL || `https://placehold.co/100x100.png`
+      } as UserProfile)
     }
   }, []);
 
@@ -53,7 +59,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         setUser(null);
         setUserProfile(null);
-        router.push('/');
+        // Only force redirect if not already on the homepage
+        if (window.location.pathname !== '/') {
+            router.push('/');
+        }
       }
       setLoading(false);
     });
@@ -80,11 +89,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         username,
         email: newUser.email,
         name: username, // Default name to username
-        photoURL: `https://placehold.co/100x100.png`
+        photoURL: `https://placehold.co/100x100.png`,
+        credits: 0,
+        badges: [],
     };
     await setDoc(userDocRef, newUserProfile);
+
+    // 4. Set the user and profile in the state without re-fetching
     setUser(newUser);
-    setUserProfile(newUserProfile as UserProfile); // Initially no role
+    setUserProfile(newUserProfile as UserProfile); 
   };
 
   const login = async (email: string, password: string) => {
@@ -102,10 +115,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const setUserRole = async (role: UserRole) => {
     if (user) {
         const userDocRef = doc(db, 'users', user.uid);
-        const updatedProfileData = { 
-            role, 
-            approved: role === 'Recycler' ? false : undefined 
+        const updatedProfileData: Partial<UserProfile> = { 
+            role,
         };
+        // Set 'approved' to false only if the role is 'Recycler'
+        if (role === 'Recycler') {
+            updatedProfileData.approved = false;
+        }
+        
         await setDoc(userDocRef, updatedProfileData, { merge: true });
         await fetchUserProfile(user); // Refetch profile to get the new role
     }
