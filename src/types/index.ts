@@ -1,0 +1,35 @@
+import type { Timestamp } from 'firebase/firestore';
+
+export type UserRole = 'Citizen' | 'Recycler' | 'Admin' | 'Contractor';
+
+export interface UserProfile {
+  uid: string;
+  role: UserRole;
+  name: string;
+  email: string;
+  photoURL: string;
+  credits?: number; // Only for citizens
+  approved?: boolean; // Only for recyclers
+  phone?: string;
+}
+
+export type PickupStatus = 'pending' | 'accepted' | 'completed' | 'rejected';
+
+export interface PickupLocation {
+  displayAddress: string;
+  lat: number;
+  lon: number;
+}
+
+export interface PickupRequest {
+  id: string;
+  citizenId: string;
+  citizenName: string;
+  recyclerId?: string;
+  category: string;
+  description: string;
+  location: PickupLocation;
+  status: PickupStatus;
+  photoURL: string;
+  createdAt: Timestamp;
+}
