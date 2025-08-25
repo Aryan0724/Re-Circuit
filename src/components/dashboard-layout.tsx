@@ -12,11 +12,13 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
-import { Menu, User } from "lucide-react"
+import { Menu, User, LogOut } from "lucide-react"
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ProfileEditor } from '@/components/profile/profile-editor';
 import type { UserProfile } from '@/types';
+import { useRouter } from 'next/navigation';
+import { Separator } from '@/components/ui/separator';
 
 
 // Mock user profile since auth is removed
@@ -33,6 +35,12 @@ const mockUserProfile: UserProfile = {
 
 function MobileSidebar() {
     const [isProfileEditorOpen, setIsProfileEditorOpen] = useState(false);
+    const router = useRouter();
+
+    const handleSignOut = () => {
+        // Since there is no auth, just redirect to home.
+        router.push('/');
+    };
 
     return (
         <Sheet>
@@ -62,15 +70,24 @@ function MobileSidebar() {
                             </div>
                         </div>
                     </div>
-                    <div className="flex-1 py-4 px-2">
+                    <div className="flex-1 py-4 px-2 space-y-1">
                          <ProfileEditor open={isProfileEditorOpen} onOpenChange={setIsProfileEditorOpen}>
                             <SheetClose asChild>
-                               <Button variant="ghost" className="w-full justify-start gap-2" onClick={() => setIsProfileEditorOpen(true)}>
+                               <Button variant="ghost" className="w-full justify-start gap-2">
                                  <User className="h-4 w-4" />
                                  Profile
                                </Button>
                             </SheetClose>
                          </ProfileEditor>
+                    </div>
+                     <Separator />
+                     <div className="p-2">
+                        <SheetClose asChild>
+                           <Button variant="ghost" className="w-full justify-start gap-2" onClick={handleSignOut}>
+                             <LogOut className="h-4 w-4" />
+                             Sign Out
+                           </Button>
+                        </SheetClose>
                     </div>
                  </div>
             </SheetContent>
