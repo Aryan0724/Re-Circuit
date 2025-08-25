@@ -4,12 +4,23 @@ import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { motion } from 'framer-motion';
-import { Recycle, LogIn } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { ChevronRight, Moon, Sun } from 'lucide-react';
+import type { UserRole } from '@/types';
+
+const roles: { role: UserRole; title: string }[] = [
+  { role: 'Citizen', title: 'Citizen' },
+  { role: 'Recycler', title: 'NGO/Recycler' },
+  { role: 'Contractor', title: 'Govt Contractor' },
+  { role: 'Admin', title: 'Admin' },
+];
 
 export default function Home() {
-  const { signInWithGoogle, user, loading } = useAuth();
-  const router = useRouter();
+  const { loading, setUserRole } = useAuth();
+  // A simple theme toggle for demonstration
+  const toggleTheme = () => {
+    document.documentElement.classList.toggle('dark');
+  };
+
 
   if (loading) {
     return (
@@ -19,41 +30,44 @@ export default function Home() {
     );
   }
 
-  if (user) {
-    // AuthProvider will handle redirection, but this is a fallback.
-    router.push('/dashboard'); 
-    return null;
-  }
-
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
+    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-background text-foreground p-4">
+       <div className="absolute top-4 right-4">
+        <Button onClick={toggleTheme} variant="ghost" size="icon" className="rounded-full">
+          <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+          <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+          <span className="sr-only">Toggle theme</span>
+        </Button>
+      </div>
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
+        className="text-center"
       >
-        <Card className="w-full max-w-md shadow-2xl">
-          <CardHeader className="text-center">
-            <div className="mx-auto bg-primary/10 p-4 rounded-full w-fit mb-4">
-              <Recycle className="h-12 w-12 text-primary" />
-            </div>
-            <CardTitle className="text-3xl font-bold text-primary">Re-Circuit</CardTitle>
-            <CardDescription className="text-muted-foreground">
-              Your connection to a sustainable future. Manage e-waste responsibly.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button 
-              className="w-full text-lg py-6" 
-              onClick={signInWithGoogle}
-              disabled={loading}
-              size="lg"
-            >
-              <LogIn className="mr-2 h-5 w-5" />
-              Sign in with Google
-            </Button>
-          </CardContent>
-        </Card>
+        <h1 className="text-5xl font-bold text-primary">Re-Circuit</h1>
+        <p className="mt-2 text-muted-foreground">Welcome! Please select your role to begin.</p>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+        className="mt-8 w-full max-w-sm space-y-3"
+      >
+        {roles.map(({ role, title }) => (
+          <Button
+            key={role}
+            variant="outline"
+            size="lg"
+            className="w-full justify-between text-base py-6 bg-card hover:bg-accent/50"
+            onClick={() => setUserRole(role)}
+            disabled={loading}
+          >
+            {title}
+            <ChevronRight className="h-5 w-5" />
+          </Button>
+        ))}
       </motion.div>
     </div>
   );

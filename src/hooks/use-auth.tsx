@@ -1,53 +1,69 @@
 'use client';
 
 import React, { useState, useEffect, createContext, useContext, type ReactNode } from 'react';
-import { onAuthStateChanged, signInWithPopup, signOut as firebaseSignOut, type User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useRouter, usePathname } from 'next/navigation';
-import { auth, db, googleProvider } from '@/lib/firebase';
 import type { UserProfile, UserRole } from '@/types';
 
+// Define mock users for fake authentication
+const mockUsers: Record<UserRole, UserProfile> = {
+  Citizen: {
+    uid: 'citizen-001',
+    role: 'Citizen',
+    name: 'Eco Citizen',
+    email: 'citizen@example.com',
+    photoURL: 'https://placehold.co/100x100.png',
+    credits: 420,
+  },
+  Recycler: {
+    uid: 'recycler-001',
+    role: 'Recycler',
+    name: 'Green Recyclers',
+    email: 'recycler@example.com',
+    photoURL: 'https://placehold.co/100x100.png',
+    approved: true,
+  },
+  Admin: {
+    uid: 'admin-001',
+    role: 'Admin',
+    name: 'Platform Admin',
+    email: 'admin@example.com',
+    photoURL: 'https://placehold.co/100x100.png',
+  },
+  Contractor: {
+    uid: 'contractor-001',
+    role: 'Contractor',
+    name: 'Govt Contractor',
+    email: 'contractor@example.com',
+    photoURL: 'https://placehold.co/100x100.png',
+  },
+};
+
 interface AuthContextType {
-  user: FirebaseUser | null;
+  user: UserProfile | null;
   userProfile: UserProfile | null;
   loading: boolean;
-  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   setUserRole: (role: UserRole) => Promise<void>;
+  signInWithGoogle: () => Promise<void>; // Kept for type consistency, but will be a no-op
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<FirebaseUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        setUser(firebaseUser);
-        const userDocRef = doc(db, 'users', firebaseUser.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-          const profile = userDoc.data() as UserProfile;
-          setUserProfile(profile);
-        } else {
-          // New user, needs to select a role
-          setUserProfile(null);
-        }
-      } else {
-        setUser(null);
-        setUserProfile(null);
-      }
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
+    // Check for a "logged in" user in localStorage
+    const storedRole = localStorage.getItem('userRole') as UserRole | null;
+    if (storedRole && mockUsers[storedRole]) {
+      setUserProfile(mockUsers[storedRole]);
+    }
+    setLoading(false);
   }, []);
-  
+
   useEffect(() => {
     if (loading) return;
 
@@ -58,75 +74,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       Contractor: '/contractor',
     };
 
-    if (!user) {
+    if (!userProfile) {
+      // If not logged in, stay on the homepage
       if (pathname !== '/') {
         router.push('/');
       }
     } else {
-      if (!userProfile) {
-        if (pathname !== '/select-role') {
-          router.push('/select-role');
-        }
-      } else {
-        const expectedPath = dashboardPaths[userProfile.role];
-        if (pathname === '/' || pathname === '/select-role' || (pathname !== expectedPath && !pathname.startsWith(expectedPath + '/'))) {
-          router.push(expectedPath);
-        }
+      // If logged in, redirect to the correct dashboard
+      const expectedPath = dashboardPaths[userProfile.role];
+      if (pathname !== expectedPath) {
+        router.push(expectedPath);
       }
     }
-  }, [user, userProfile, loading, pathname, router]);
-
-
-  const signInWithGoogle = async () => {
-    setLoading(true);
-    try {
-      await signInWithPopup(auth, googleProvider);
-    } catch (error) {
-      console.error("Error signing in with Google", error);
-    }
-    // The onAuthStateChanged listener will handle the rest
-  };
+  }, [userProfile, loading, pathname, router]);
 
   const signOut = async () => {
-    await firebaseSignOut(auth);
+    setLoading(true);
+    localStorage.removeItem('userRole');
+    setUserProfile(null);
     router.push('/');
+    setLoading(false);
   };
 
   const setUserRole = async (role: UserRole) => {
-    if (!user) return;
     setLoading(true);
-    const newUserProfile: UserProfile = {
-      uid: user.uid,
-      role,
-      name: user.displayName || 'Anonymous',
-      email: user.email || '',
-      photoURL: user.photoURL || '',
-    };
-    if (role === 'Citizen') {
-      newUserProfile.credits = 0;
+    if (mockUsers[role]) {
+      localStorage.setItem('userRole', role);
+      setUserProfile(mockUsers[role]);
+    } else {
+      console.error("Invalid role selected");
     }
-    if (role === 'Recycler') {
-      newUserProfile.approved = false;
-    }
-
-    try {
-      await setDoc(doc(db, 'users', user.uid), newUserProfile);
-      setUserProfile(newUserProfile);
-    } catch (error) {
-      console.error("Error setting user role:", error);
-    } finally {
-      setLoading(false);
-    }
+    // No need to set loading to false, as the effect will trigger a redirect
+  };
+  
+  // No-op function to maintain type consistency where signInWithGoogle was used
+  const signInWithGoogle = async () => {
+    console.warn("signInWithGoogle is not implemented in fake auth.");
   };
 
+  const value = { user: userProfile, userProfile, loading, signOut, setUserRole, signInWithGoogle };
 
-  const value = { user, userProfile, loading, signInWithGoogle, signOut, setUserRole };
-
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export const useAuth = (): AuthContextType => {
