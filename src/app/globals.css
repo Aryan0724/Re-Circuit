@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -65,6 +66,14 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  /* Show the animated gradient only when not on the welcome screen */
+  body:not(:has(.bg-\[\#F0FFF4\])) .main-background {
+      display: block;
+  }
+  /* Hide it on the welcome screen */
+  body:has(.bg-\[\#F0FFF4\]) .main-background {
+      display: none;
   }
 }
 
