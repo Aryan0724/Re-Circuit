@@ -12,9 +12,8 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
-import { Menu, LogOut, User } from "lucide-react"
+import { Menu, User } from "lucide-react"
 import Link from 'next/link';
-import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ProfileEditor } from '@/components/profile/profile-editor';
 import type { UserProfile } from '@/types';
@@ -72,15 +71,6 @@ function MobileSidebar() {
                                </Button>
                             </SheetClose>
                          </ProfileEditor>
-                    </div>
-                    <Separator />
-                    <div className="p-2">
-                        <SheetClose asChild>
-                            <Button variant="ghost" className="w-full justify-start gap-2" onClick={() => alert("Logout functionality removed.")}>
-                                <LogOut className="h-4 w-4" />
-                                Sign Out
-                            </Button>
-                        </SheetClose>
                     </div>
                  </div>
             </SheetContent>
