@@ -8,13 +8,12 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    // Default to citizen view since auth is removed
-    router.push('/citizen');
+    router.push('/welcome');
   }, [router]);
 
   return (
     <div className="flex items-center justify-center min-h-screen">
-      <p>Loading your dashboard...</p>
+      <p>Loading...</p>
     </div>
   );
 }

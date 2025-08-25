@@ -7,8 +7,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import type { UserProfile } from '@/types';
-import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
+
+
+const mockRecyclers: UserProfile[] = [
+    { uid: 'recycler-001', role: 'Recycler', name: 'Recycle Corp', email: 'recycler@example.com', photoURL: 'https://placehold.co/100x100.png', approved: true },
+    { uid: 'recycler-002', role: 'Recycler', name: 'Green Machines', email: 'green@example.com', photoURL: 'https://placehold.co/100x100.png', approved: false },
+]
 
 export function RecyclerManagement() {
   const [recyclers, setRecyclers] = useState<UserProfile[]>([]);
@@ -16,35 +20,18 @@ export function RecyclerManagement() {
   const { toast } = useToast();
 
   useEffect(() => {
-    const fetchRecyclers = async () => {
-        setLoading(true);
-        try {
-            const q = query(collection(db, 'users'), where('role', '==', 'Recycler'));
-            const querySnapshot = await getDocs(q);
-            const recyclerList = querySnapshot.docs.map(doc => ({ ...doc.data() } as UserProfile));
-            setRecyclers(recyclerList);
-        } catch (error) {
-            console.error("Error fetching recyclers:", error);
-            toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch recycler data.' });
-        }
-        setLoading(false);
-    }
-    fetchRecyclers();
-  }, [toast]);
+    // Simulate fetching data
+    setRecyclers(mockRecyclers);
+    setLoading(false);
+  }, []);
 
   const handleApprovalChange = async (uid: string, approved: boolean) => {
-    try {
-        const recyclerDocRef = doc(db, 'users', uid);
-        await updateDoc(recyclerDocRef, { approved });
-
-        setRecyclers(currentRecyclers => 
-            currentRecyclers.map(r => r.uid === uid ? { ...r, approved } : r)
-        );
-        toast({ title: `Recycler ${approved ? 'approved' : 'unapproved'}.` });
-    } catch (error) {
-        console.error("Error updating recycler status:", error);
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not update recycler status.' });
-    }
+    // In a real app, this would update the database.
+    // For this mock version, we just update the local state.
+    setRecyclers(currentRecyclers => 
+        currentRecyclers.map(r => r.uid === uid ? { ...r, approved } : r)
+    );
+    toast({ title: `Recycler ${approved ? 'approved' : 'unapproved'}.` });
   };
 
   return (

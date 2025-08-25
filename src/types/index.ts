@@ -7,7 +7,6 @@ export type UserRole = 'Citizen' | 'Recycler' | 'Admin' | 'Contractor';
 export interface UserProfile {
   uid: string;
   role?: UserRole; // Role is now optional, as it's set after signup
-  username: string; // Add username
   name: string;
   email: string | null; // email can be null from firebase user
   photoURL: string;
