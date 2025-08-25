@@ -11,67 +11,28 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
-import type { UserRole } from '@/types';
+import type { UserRole, UserProfile } from '@/types';
 import { useAuth } from '@/hooks/use-auth';
 
 // Admin role is assigned manually, not selectable on signup
 const selectableRoles: UserRole[] = ['Citizen', 'Recycler', 'Contractor'];
 
 const WelcomeScreen: React.FC = () => {
+  const { user, setUserRole } = useAuth();
   const [loadingRole, setLoadingRole] = useState<UserRole | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleRoleSelection = async (role: UserRole) => {
-    if (!user) return;
+  if (!user) {
+    return null; // Or a loading indicator, but useAuth should redirect
+  }
 
+  const handleRoleSelection = async (role: UserRole) => {
     setLoadingRole(role);
     setError(null);
 
     try {
-      const baseProfile = {
-        uid: userProfile.uid,
-        name: user.displayName || 'New User',
-        email: user.email || '',
-        photoURL: user.photoURL || `https://avatar.vercel.sh/${user.uid}.png`,
-        role: role,
-      };
-
-      let newUserProfile: UserProfile;
-
-      // Add role-specific default properties
-      switch (role) {
-        case 'Citizen':
-          newUserProfile = {
-            ...baseProfile,
-            role: 'Citizen',
-            credits: 0,
-            badges: [],
-          };
-          break;
-        case 'Recycler':
-          newUserProfile = {
-            ...baseProfile,
-            role: 'Recycler',
-            approved: false, // Recyclers must be approved by an Admin
-          };
-          break;
-        case 'Contractor':
-          newUserProfile = {
-            ...baseProfile,
-            role: 'Contractor',
-          };
-          break;
-        default:
-          throw new Error(`Invalid role selected: ${role}`);
-      }
-      
-      const appId = app.options.appId;
-      if (!appId) {
-        throw new Error("Firebase App ID could not be determined.");
-      }
-      
-      // Use setUserRole from the hook to update profile in Firestore and state
       await setUserRole(role);
+      // The redirect will be handled by the AuthProvider's useEffect
     } catch (err) {
       console.error("Error creating user profile in Firestore: ", err);
       setError('Failed to create your profile. Please try again.');

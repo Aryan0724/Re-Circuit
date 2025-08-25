@@ -5,101 +5,92 @@ import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut as fir
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useRouter, usePathname } from 'next/navigation';
 import type { UserProfile, UserRole } from '@/types';
-import { auth, db } from '@/lib/firebase'; // Assuming firebase.ts exports auth and db
+import { auth, db } from '@/lib/firebase';
 
 const googleProvider = new GoogleAuthProvider();
 
-const USERS_COLLECTION = 'artifacts/recircuit/public/data/users'; // Secure path as requested
-
+const USERS_COLLECTION = 'users';
 
 interface AuthContextType {
   userProfile: UserProfile | null;
   loading: boolean;
-  setUserRole: (role: UserRole) => void;
+  user: User | null;
+  signOut: () => Promise<void>;
+  setUserRole: (role: UserRole) => Promise<void>;
   updateUserProfile: (updates: Partial<UserProfile>) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const publicPages = ['/']; // Pages accessible to unauthenticated users
+const welcomePage = '/welcome'; // Page for new users to select a role
+
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
-  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
 
-  // Listen for Firebase Auth state changes
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setFirebaseUser(user);
-      if (user) {
-        setLoading(true);
-        // Check if user profile exists in Firestore
-        const userDocRef = doc(db, USERS_COLLECTION, user.uid);
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setLoading(true);
+      if (currentUser) {
+        setUser(currentUser);
+        const userDocRef = doc(db, USERS_COLLECTION, currentUser.uid);
         const userDocSnap = await getDoc(userDocRef);
 
         if (userDocSnap.exists()) {
-          // Existing user
-          const profileData = userDocSnap.data() as UserProfile;
-          setUserProfile(profileData);
+          const profile = userDocSnap.data() as UserProfile;
+          setUserProfile(profile);
         } else {
-          // New user - set initial profile data
-          const initialProfile: UserProfile = {
-            uid: user.uid,
-            name: user.displayName || 'New User',
-            email: user.email || '',
-            photoURL: user.photoURL || '',
-            role: 'Citizen', // Default role, will be updated in WelcomeScreen
-            credits: 0, // Default credits
-            badges: [], // Default empty badges array
-            approved: false, // Default approved status for Recyclers/Contractors
-          };
-          await setDoc(userDocRef, initialProfile);
-          setUserProfile(initialProfile);
+          // This is a new user, they will be redirected to the welcome screen
+          // to create their profile.
+          setUserProfile(null);
         }
-        setLoading(false);
       } else {
-        // User logged out
+        setUser(null);
         setUserProfile(null);
-        setLoading(false);
       }
+      setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
 
-
   useEffect(() => {
-    const dashboardPaths: Record<UserRole, string> = {
-      Citizen: '/citizen', // Assuming '/citizen' is the Citizen dashboard path
-      Recycler: '/recycler',
-      Admin: '/admin',
-      Contractor: '/contractor',
-    };
+    if (loading) return;
 
-    if (userProfile) {
-      const expectedPath = dashboardPaths[userProfile.role];
-      // Only redirect if the user is not already on their designated dashboard or on the welcome screen
-      if (pathname !== expectedPath && pathname !== '/welcome') {
-        router.push(expectedPath);
+    const isPublicPage = publicPages.includes(pathname);
+    const isOnWelcomePage = pathname === welcomePage;
+
+    if (user) {
+      if (userProfile) {
+        // User is logged in and has a profile
+        const dashboardPath = `/${userProfile.role.toLowerCase()}`;
+        if (pathname !== dashboardPath && !isOnWelcomePage) {
+          router.push(dashboardPath);
+        }
+      } else {
+        // User is logged in but has no profile, redirect to welcome
+        if (!isOnWelcomePage) {
+          router.push(welcomePage);
+        }
       }
-    } else if (firebaseUser && !userProfile && pathname !== '/welcome') {
-      // Firebase user exists but no profile yet (new user)
-      router.push('/welcome');
+    } else {
+      // No user is logged in
+      if (!isPublicPage && !isOnWelcomePage) {
+        router.push('/');
+      }
     }
-    else if (!firebaseUser && !isPublicPage) {
-        // No Firebase user and not on a public page, redirect to home (login screen)
-      router.push('/');
-    }
-
-  }, [userProfile, firebaseUser, pathname, router, loading]);
+  }, [user, userProfile, loading, pathname, router]);
 
   const signInWithGoogle = async () => {
     setLoading(true);
     try {
       await signInWithPopup(auth, googleProvider);
-      // onAuthStateChanged listener will handle setting userProfile and redirection
+      // onAuthStateChanged will handle the rest
     } catch (error) {
       console.error("Error signing in with Google:", error);
       setLoading(false);
@@ -110,27 +101,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       await firebaseSignOut(auth);
-      // onAuthStateChanged listener will handle setting userProfile to null and redirection
+      router.push('/');
     } catch (error) {
       console.error("Error signing out:", error);
+    } finally {
       setLoading(false);
     }
   };
+
+  const setUserRole = async (role: UserRole) => {
+    if (!user) throw new Error("User not authenticated.");
+
+    const baseProfile = {
+        uid: user.uid,
+        name: user.displayName || 'New User',
+        email: user.email || '',
+        photoURL: user.photoURL || `https://avatar.vercel.sh/${user.uid}.png`,
+        role: role,
+      };
+
+      let newUserProfile: UserProfile;
+
+      switch (role) {
+        case 'Citizen':
+          newUserProfile = { ...baseProfile, role: 'Citizen', credits: 0, badges: [] };
+          break;
+        case 'Recycler':
+          newUserProfile = { ...baseProfile, role: 'Recycler', approved: false };
+          break;
+        case 'Contractor':
+          newUserProfile = { ...baseProfile, role: 'Contractor', badges: [] };
+          break;
+        case 'Admin':
+           newUserProfile = { ...baseProfile, role: 'Admin', badges: [] };
+           break;
+        default:
+          throw new Error(`Invalid role selected: ${role}`);
+      }
+
+    const userDocRef = doc(db, USERS_COLLECTION, user.uid);
+    await setDoc(userDocRef, newUserProfile);
+    setUserProfile(newUserProfile);
+  };
   
-  // This function is part of AuthContextType but was not defined.
-  // It was intended for profile updates, which should happen directly
-  // or via a dedicated profile editor component.
-  // Placeholder implementation, will be removed if not used elsewhere.
   const updateUserProfile = async (updates: Partial<UserProfile>) => {
     if (!userProfile) return;
     const userDocRef = doc(db, USERS_COLLECTION, userProfile.uid);
     await setDoc(userDocRef, updates, { merge: true });
-    setUserProfile({...userProfile, ...updates}); // Update local state
+    setUserProfile((prev) => prev ? { ...prev, ...updates } : null);
   };
 
-
-
-  const value = { userProfile, loading, signOut, updateUserProfile, signInWithGoogle };
+  const value = { user, userProfile, loading, signInWithGoogle, signOut, setUserRole, updateUserProfile };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
