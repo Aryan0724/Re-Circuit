@@ -24,7 +24,6 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const publicPages = ['/']; // Pages accessible to unauthenticated users
-const welcomePage = '/'; // Page for new users to select a role is now the root
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -45,8 +44,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const profile = userDocSnap.data() as UserProfile;
           setUserProfile(profile);
         } else {
-          // This is a new user, they will stay on the welcome screen
-          // to create their profile.
           setUserProfile(null);
         }
       } else {
@@ -64,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const isPublicPage = publicPages.includes(pathname);
 
-    if (user && userProfile) {
+    if (userProfile) {
       // User is logged in and has a profile, redirect to their dashboard
       const dashboardPath = `/${userProfile.role.toLowerCase()}`;
       if (pathname !== dashboardPath) {
@@ -91,15 +88,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    setLoading(true);
-    try {
-      await firebaseSignOut(auth);
-      router.push('/');
-    } catch (error) {
-      console.error("Error signing out:", error);
-    } finally {
-      setLoading(false);
-    }
+    await firebaseSignOut(auth);
+    router.push('/');
   };
 
   const setUserRole = async (role: UserRole) => {

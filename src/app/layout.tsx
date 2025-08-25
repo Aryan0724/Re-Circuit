@@ -24,7 +24,7 @@ export default function RootLayout({
       <body className="font-body antialiased h-full">
         <AuthProvider>
           <AnimatedGradient />
-          <main>{children}</main>
+          {children}
           <Toaster />
         </AuthProvider>
       </body>
